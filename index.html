@@ -1,0 +1,3474 @@
+<!DOCTYPE html>
+<html lang="ja" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="週間目標ボード" />
+  <meta name="theme-color" content="#4f46e5" />
+  <title>週間目標＆習慣トラッキング ダッシュボード</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Noto Sans JP -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', '"Noto Sans JP"', 'sans-serif'],
+          },
+          keyframes: {
+            pop: {
+              '0%': { transform: 'scale(0.9)' },
+              '50%': { transform: 'scale(1.08)' },
+              '100%': { transform: 'scale(1)' },
+            },
+            fadeIn: {
+              '0%': { opacity: '0', transform: 'translateY(6px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            floatUp: {
+              '0%': { opacity: '1', transform: 'translateY(0) scale(0.9)' },
+              '100%': { opacity: '0', transform: 'translateY(-28px) scale(1.1)' },
+            }
+          },
+          animation: {
+            pop: 'pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            fadeIn: 'fadeIn 0.25s ease-out forwards',
+            floatUp: 'floatUp 0.9s ease-out forwards',
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.45);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.7);
+    }
+    .check-pop {
+      animation: pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    textarea.daily-goal-input {
+      resize: none;
+      scrollbar-width: none;
+    }
+    textarea.daily-goal-input::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    @keyframes heroBob {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+    .pixel-hero-bob {
+      animation: heroBob 1.6s ease-in-out infinite;
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300 font-sans pb-28 md:pb-20 selection:bg-indigo-500 selection:text-white">
+
+  <!-- トースト通知コンテナ -->
+  <div id="toast-container" class="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 pointer-events-none flex flex-col gap-2 max-w-[90vw]"></div>
+
+  <!-- ステージクリア＆レベルアップ祝賀バナーコンテナ -->
+  <div id="stage-clear-banner-container" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2 w-full max-w-lg px-4"></div>
+
+  <!-- トップナビゲーションヘッダー（週切り替えカレンダーバー＆スマホ連携付き） -->
+  <header class="sticky top-0 z-30 backdrop-blur-md bg-white/95 dark:bg-slate-900/95 border-b border-slate-200/80 dark:border-slate-800 shadow-2xs">
+    <div class="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex flex-col gap-2.5">
+      
+      <!-- 上段: ロゴ ＆ カレンダー週切り替えナビゲーション ＆ 右側アクション -->
+      <div class="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+        <!-- ロゴ＆タイトル＆クラウド同期ステータス -->
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-xs shrink-0">
+            <i data-lucide="calendar-check-2" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
+                週間目標ボード
+              </h1>
+              <button
+                id="sync-status-badge"
+                type="button"
+                onclick="openSyncModal()"
+                title="クリックしてPC・スマホ同期設定を開く"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-indigo-400 transition-colors"
+              >
+                <span id="sync-status-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span id="sync-status-text">端末保存</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-slate-400 dark:text-slate-500 font-medium hidden sm:block">
+              PC・スマホ対応 / 週ごとに目標と日々の達成記録を保存・管理
+            </p>
+          </div>
+        </div>
+
+        <!-- 中央: 週切り替えナビゲーションバー -->
+        <div class="flex flex-wrap items-center justify-between sm:justify-center w-full lg:w-auto gap-1 sm:gap-2 bg-slate-100/90 dark:bg-slate-800/90 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 order-3 lg:order-2">
+          <!-- 前の週ボタン -->
+          <button
+            id="btn-prev-week"
+            type="button"
+            title="前の週へ移動"
+            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
+          >
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            <span class="hidden sm:inline">前の週</span>
+          </button>
+
+          <!-- 現在の表示週レンジ＆バッジ -->
+          <div class="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2.5 py-1">
+            <span id="week-relative-badge" class="text-[10px] sm:text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-indigo-600 text-white shrink-0">
+              今週
+            </span>
+            <span id="week-range-label" class="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white whitespace-nowrap">
+              2026年 10月12日(月) 〜 10月18日(日)
+            </span>
+          </div>
+
+          <!-- 次の週ボタン -->
+          <button
+            id="btn-next-week"
+            type="button"
+            title="次の週へ移動"
+            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 shadow-2xs transition-all cursor-pointer active:scale-95"
+          >
+            <span class="hidden sm:inline">次の週</span>
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+
+          <div class="hidden sm:block h-4 w-[1px] bg-slate-300 dark:bg-slate-700 mx-0.5"></div>
+
+          <!-- 今週へ戻るボタン -->
+          <button
+            id="btn-jump-current-week"
+            type="button"
+            class="px-2 py-1.5 rounded-xl text-[11px] sm:text-xs font-extrabold text-indigo-600 dark:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+          >
+            今週
+          </button>
+
+          <!-- カレンダー日付ピッカー（指定日の週へジャンプ） -->
+          <div class="relative flex items-center">
+            <input
+              id="week-date-picker"
+              type="date"
+              title="カレンダーから日付を選んでその週へ移動"
+              class="text-[11px] sm:text-xs font-bold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 px-2 py-1 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer w-[118px] sm:w-auto"
+            />
+          </div>
+        </div>
+
+        <!-- 右側コントロール -->
+        <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap order-2 lg:order-3">
+          <!-- 前週の目標をコピー -->
+          <button
+            id="btn-copy-prev-week"
+            type="button"
+            title="前の週に設定した週間目標と各日の目標をこの週にコピーします"
+            class="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-extrabold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:hover:bg-amber-900/70 dark:text-amber-300 border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
+          >
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">前週コピー</span>
+          </button>
+
+          <!-- 同期・スマホ連携モーダルボタン -->
+          <button
+            id="btn-open-sync"
+            type="button"
+            onclick="openSyncModal()"
+            title="PC・スマホ間のデータ同期・バックアップ"
+            class="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-extrabold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:hover:bg-indigo-900/70 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+          >
+            <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">同期・保存</span>
+          </button>
+
+          <!-- この週のチェックをリセット -->
+          <button
+            id="btn-clear-week-checks"
+            type="button"
+            title="表示中の週の達成チェックをすべて未達成に戻します"
+            class="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 transition-colors cursor-pointer"
+          >
+            <i data-lucide="eraser" class="w-3.5 h-3.5"></i>
+            <span class="hidden xl:inline">チェック消去</span>
+          </button>
+
+          <!-- 初期サンプルに戻す -->
+          <button
+            id="btn-reset"
+            type="button"
+            title="初期サンプルデータに戻す"
+            class="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 transition-colors cursor-pointer"
+          >
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          </button>
+
+          <!-- ダークモード切替 -->
+          <button
+            id="btn-theme"
+            type="button"
+            title="ダーク/ライトモード切替"
+            class="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 transition-colors cursor-pointer"
+          >
+            <i id="theme-icon" data-lucide="moon" class="w-4 h-4"></i>
+          </button>
+
+          <!-- 新しいタスクを追加 -->
+          <button
+            id="btn-add-habit"
+            type="button"
+            class="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer active:scale-95"
+          >
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>追加</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-6 sm:space-y-8">
+
+    <!-- ======================================================================= -->
+    <!-- 1. 今週の目標（シンプル・4カテゴリー一覧・直接記入） -->
+    <!-- ======================================================================= -->
+    <section id="section-weekly-goals" class="scroll-mt-28 rounded-3xl bg-white dark:bg-slate-900 p-3.5 sm:p-4 shadow-sm border border-slate-200/80 dark:border-slate-800">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h2 id="section1-title" class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
+            今週の目標
+          </h2>
+          <span class="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+            （タップして直接入力・自動保存）
+          </span>
+        </div>
+      </div>
+
+      <div id="top-weekly-goals-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3">
+        <!-- JSで仕事(青)・家事(橙)・自己研鑽(紫)・健康(緑)の4つのシンプルな目標カードを生成 -->
+      </div>
+    </section>
+
+
+    <!-- ======================================================================= -->
+    <!-- 2. 各日の目標・記録（月曜〜日曜：スマホ日別カード表示 ＆ PC週間表 切替対応） -->
+    <!-- ======================================================================= -->
+    <section id="section-daily-records" class="scroll-mt-28 rounded-3xl bg-white dark:bg-slate-900 shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+      <!-- セクションヘッダー＆表示モード切替＆フィルターバー -->
+      <div class="p-4 sm:p-6 border-b border-slate-200/80 dark:border-slate-800 space-y-4">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+          <div class="flex items-center justify-between sm:justify-start gap-3 flex-wrap">
+            <h2 class="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white">
+              各日の目標・記録（月曜〜日曜）
+            </h2>
+
+            <!-- 表示モード切替ボタン（📱スマホ日別カード / 💻週間テーブル） -->
+            <div class="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+              <button
+                id="btn-view-mobile-cards"
+                type="button"
+                onclick="setRecordViewMode('cards')"
+                class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer"
+              >
+                <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+                <span>日別カード</span>
+              </button>
+              <button
+                id="btn-view-pc-table"
+                type="button"
+                onclick="setRecordViewMode('table')"
+                class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer"
+              >
+                <i data-lucide="table-2" class="w-3.5 h-3.5"></i>
+                <span>週間表</span>
+              </button>
+            </div>
+
+            <!-- 選択中の曜日インジケーター -->
+            <div class="hidden sm:flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl border border-slate-200/80 dark:border-slate-700">
+              <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold">選択曜日:</span>
+              <select id="today-selector" class="bg-transparent text-xs font-extrabold text-indigo-600 dark:text-indigo-400 focus:outline-none cursor-pointer"></select>
+            </div>
+          </div>
+
+          <!-- クイック操作ボタン群 -->
+          <div class="flex flex-wrap items-center gap-2 self-start lg:self-center w-full sm:w-auto">
+            <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-xl cursor-pointer select-none hover:bg-slate-200/70 dark:hover:bg-slate-700/70 transition-colors">
+              <input id="filter-uncompleted-today" type="checkbox" class="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5" />
+              <span id="label-uncompleted-today">未達成のみ</span>
+            </label>
+
+            <button id="btn-check-all-today" class="inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:hover:bg-emerald-900/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+              <span id="label-check-all-today">選択曜日をすべて達成</span>
+            </button>
+
+            <button id="btn-clear-all-daily-goals" type="button" onclick="requestClearAllDailyGoals()" title="この週のすべてのタスクの「各日（月〜日）の目標」を一括で空欄にします" class="inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:hover:bg-rose-900/70 dark:text-rose-300 border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer">
+              <i data-lucide="eraser" class="w-3.5 h-3.5"></i>
+              <span id="label-clear-all-daily-goals">各日の目標を一括クリア</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- カテゴリー絞り込みタブ＆検索 -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div id="category-filter-tabs" class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+            <!-- JSで生成 -->
+          </div>
+
+          <div class="relative w-full md:w-64">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input
+              id="search-input"
+              type="text"
+              placeholder="タスク名や目標で検索..."
+              class="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none text-slate-800 dark:text-slate-100"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- (A) 📱 スマホ・タブレットでも片手で操作しやすい「日別カードビュー」 -->
+      <div id="mobile-daily-cards-container" class="hidden p-4 sm:p-6 space-y-4">
+        <!-- 月〜日の曜日切り替えピルバー -->
+        <div id="mobile-day-pills" class="grid grid-cols-7 gap-1.5 sm:gap-2">
+          <!-- JSで月〜日の日付＆達成数タブを描画 -->
+        </div>
+
+        <!-- 選択中の曜日のヘッダーバー -->
+        <div id="mobile-selected-day-banner" class="flex items-center justify-between px-4 py-2.5 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60">
+          <!-- JSで描画 -->
+        </div>
+
+        <!-- 選択中の曜日のタスクカードリスト -->
+        <div id="mobile-daily-cards-list" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <!-- JSで各タスクの「その日の目標入力＋大きな達成ボタン」カードを描画 -->
+        </div>
+      </div>
+
+      <!-- (B) 💻 PC・ワイド画面向けの「週間マトリックステーブル（縦：月曜〜日曜 ／ 横：各タスク）」 -->
+      <div id="pc-matrix-table-container" class="overflow-x-auto">
+        <table class="w-full min-w-[980px] border-collapse">
+          <thead>
+            <tr id="matrix-header-row" class="bg-slate-100/80 dark:bg-slate-800/70 border-b border-slate-200/80 dark:border-slate-800 text-left">
+              <!-- JSで各タスク列のヘッダーを描画 -->
+            </tr>
+          </thead>
+          <tbody id="matrix-tbody" class="divide-y divide-slate-200/70 dark:divide-slate-800">
+            <!-- JSで月〜日の曜日行と各タスクの目標セルを描画 -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================= -->
+    <!-- 3. RPGアドベンチャー＆ステータス（一番下部：現在の舞台と舞台クエスト） -->
+    <!-- ======================================================================= -->
+    <section id="rpg-bottom-section" class="scroll-mt-28 rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-4 sm:p-7 shadow-xl border border-indigo-800/60 space-y-6">
+      <!-- JSで現在の舞台・ワールドマップ・舞台クエスト・4カテゴリーステータスを描画 -->
+    </section>
+
+  </main>
+
+  <!-- ======================================================================= -->
+  <!-- スマホ専用 下部固定クイックナビゲーションバー (画面幅 md 未満で表示) -->
+  <!-- ======================================================================= -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-2 py-1.5 shadow-lg">
+    <div class="grid grid-cols-5 gap-1 max-w-md mx-auto">
+      <button type="button" onclick="scrollToSection('section-weekly-goals')" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-95">
+        <i data-lucide="target" class="w-4 h-4"></i>
+        <span class="text-[10px] font-extrabold mt-0.5">今週の目標</span>
+      </button>
+      <button type="button" onclick="scrollToSection('section-daily-records')" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-95">
+        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+        <span class="text-[10px] font-extrabold mt-0.5">各日の記録</span>
+      </button>
+      <button type="button" onclick="document.getElementById('btn-add-habit').click()" class="flex flex-col items-center justify-center py-1 rounded-2xl bg-indigo-600 text-white shadow-sm active:scale-95">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span class="text-[10px] font-extrabold mt-0.5">タスク追加</span>
+      </button>
+      <button type="button" onclick="scrollToSection('rpg-bottom-section')" class="flex flex-col items-center justify-center py-1 rounded-xl text-amber-600 dark:text-amber-400 active:scale-95">
+        <i data-lucide="swords" class="w-4 h-4"></i>
+        <span class="text-[10px] font-extrabold mt-0.5">RPG舞台</span>
+      </button>
+      <button type="button" onclick="openSyncModal()" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-95">
+        <i data-lucide="smartphone" class="w-4 h-4"></i>
+        <span class="text-[10px] font-extrabold mt-0.5">同期・保存</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ======================================================================= -->
+  <!-- モーダル 1: タスクと①週間トータル目標・②各日目標の追加・編集モーダル -->
+  <!-- ======================================================================= -->
+  <div id="habit-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+    <div class="w-full max-w-2xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-fadeIn my-8">
+      <div class="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+        <h3 id="modal-title" class="text-base font-extrabold text-slate-900 dark:text-white">
+          新しいタスクと目標を追加
+        </h3>
+        <button id="btn-close-modal" type="button" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="habit-form" class="p-6 space-y-4 max-h-[82vh] overflow-y-auto">
+        <input type="hidden" id="form-habit-id" value="" />
+
+        <!-- 4カテゴリー選択 -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+            カテゴリー（4分類） <span class="text-rose-500">*</span>
+          </label>
+          <div id="modal-category-selector" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <!-- JSで生成 -->
+          </div>
+        </div>
+
+        <!-- タスク名 ＆ 週目標日数 -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label for="form-name" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              タスク名 <span class="text-rose-500">*</span>
+            </label>
+            <input
+              id="form-name"
+              type="text"
+              required
+              placeholder="例: 英語シャドーイング30分、場所別15分掃除..."
+              class="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:outline-none text-slate-900 dark:text-white"
+            />
+          </div>
+          <div>
+            <label for="form-target-days" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              目標日数 (週何回)
+            </label>
+            <select
+              id="form-target-days"
+              class="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:outline-none text-slate-900 dark:text-white cursor-pointer"
+            >
+              <option value="1">週 1 日</option>
+              <option value="2">週 2 日</option>
+              <option value="3">週 3 日</option>
+              <option value="4">週 4 日</option>
+              <option value="5" selected>週 5 日 (平日)</option>
+              <option value="6">週 6 日</option>
+              <option value="7">週 7 日 (毎日)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 達成時のランダム獲得EXP幅（タスクごとに設定可能） -->
+        <div class="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <label class="text-xs font-extrabold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+              <span>🎲</span>
+              <span>1回達成時のランダム獲得EXP幅（＆ゴールド）</span>
+            </label>
+            <span class="text-[11px] font-bold text-amber-700 dark:text-amber-400">
+              チェック時に最小〜最大の間からランダム抽選されます
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="form-exp-min" class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                最小 EXP (Min)
+              </label>
+              <input
+                id="form-exp-min"
+                type="number"
+                min="1"
+                max="500"
+                value="15"
+                required
+                class="w-full px-3 py-1.5 text-sm font-extrabold rounded-xl bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 focus:border-indigo-500 focus:outline-none text-slate-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label for="form-exp-max" class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                最大 EXP (Max)
+              </label>
+              <input
+                id="form-exp-max"
+                type="number"
+                min="1"
+                max="500"
+                value="30"
+                required
+                class="w-full px-3 py-1.5 text-sm font-extrabold rounded-xl bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 focus:border-indigo-500 focus:outline-none text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- ① 今週のトータル達成目標 -->
+        <div>
+          <label for="form-weekly-goal" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+            ① 今週の目標（1週間のトータル達成目標） <span class="text-rose-500">*</span>
+          </label>
+          <input
+            id="form-weekly-goal"
+            type="text"
+            required
+            placeholder="例: 今週中にテキストUnit 4〜6を完走する / 毎日15分掃除して週末に部屋をスッキリさせる"
+            class="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:outline-none text-slate-900 dark:text-white"
+          />
+        </div>
+
+        <!-- ② 各日（月〜日）の達成目標 -->
+        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <label class="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+              ② 各日（月曜〜日曜）の具体的な達成目標
+            </label>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <input
+                id="quick-fill-text"
+                type="text"
+                placeholder="共通の目標を一括入力..."
+                class="px-2.5 py-1 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none text-slate-800 dark:text-slate-100 w-36 sm:w-40"
+              />
+              <button
+                id="btn-fill-weekdays"
+                type="button"
+                class="px-2 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 cursor-pointer"
+              >
+                月〜金に反映
+              </button>
+              <button
+                id="btn-fill-alldays"
+                type="button"
+                class="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 cursor-pointer"
+              >
+                全曜日に反映
+              </button>
+              <button
+                id="btn-clear-modal-daily"
+                type="button"
+                title="月曜〜日曜の目標欄をすべて空欄にする"
+                class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 cursor-pointer flex items-center gap-1"
+              >
+                <i data-lucide="eraser" class="w-3 h-3"></i>
+                <span>一括クリア</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="modal-daily-goals-inputs" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <!-- JSで月〜日の入力欄を生成 -->
+          </div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-3">
+          <button
+            id="btn-cancel-modal"
+            type="button"
+            class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+          >
+            キャンセル
+          </button>
+          <button
+            type="submit"
+            class="px-5 py-2 rounded-xl text-xs font-extrabold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm cursor-pointer"
+          >
+            保存する
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- モーダル 2: PC・スマホ同期 ＆ バックアップ連携モーダル -->
+  <!-- ======================================================================= -->
+  <div id="sync-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+    <div class="w-full max-w-xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-fadeIn my-8">
+      <div class="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="smartphone" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+          <h3 class="text-base font-extrabold text-slate-900 dark:text-white">
+            PC・スマホ連携 ＆ データ同期・保存
+          </h3>
+        </div>
+        <button type="button" onclick="closeSyncModal()" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5 max-h-[82vh] overflow-y-auto text-xs sm:text-sm">
+        <!-- 1. クラウド合言葉（ルームID）自動同期 -->
+        <div class="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/70 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="font-extrabold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
+              <i data-lucide="cloud" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
+              <span>① 合言葉（同期キー）でPC・スマホ自動同期</span>
+            </span>
+            <span id="modal-cloud-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              確認中...
+            </span>
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            PCとスマホで同じ「合言葉（半角英数字4文字以上）」を設定すると、クラウド経由で目標と達成記録がリアルタイムに自動同期されます。
+          </p>
+          <div class="flex items-center gap-2 pt-1">
+            <input
+              id="sync-room-key-input"
+              type="text"
+              placeholder="例: my-habit-2026"
+              class="w-full px-3 py-2 text-xs font-bold rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:outline-none text-slate-900 dark:text-white"
+            />
+            <button
+              type="button"
+              onclick="applySyncRoomKey()"
+              class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold whitespace-nowrap cursor-pointer shadow-xs"
+            >
+              同期キーを設定
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. ワンタップ引き継ぎコード（コピー＆貼り付け） -->
+        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+          <div class="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+            <i data-lucide="copy-check" class="w-4 h-4 text-emerald-600"></i>
+            <span>② 引き継ぎコードでPC ⇄ スマホ間コピー移行</span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            「データコードをコピー」してLINEメモやメール等で別端末へ送り、貼り付けて「復元」するだけで全週のデータとRPGレベルをそのまま移行できます。
+          </p>
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onclick="copySyncCodeToClipboard()"
+              class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer shadow-xs"
+            >
+              <i data-lucide="clipboard-copy" class="w-3.5 h-3.5"></i>
+              <span>現在のデータコードをコピー</span>
+            </button>
+            <button
+              type="button"
+              onclick="exportJsonBackup()"
+              class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold cursor-pointer"
+            >
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>ファイル保存 (.json)</span>
+            </button>
+            <label class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold cursor-pointer">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              <span>ファイル読込</span>
+              <input type="file" accept=".json" onchange="importJsonBackupFile(event)" class="hidden" />
+            </label>
+          </div>
+          <div class="pt-1 flex items-center gap-2">
+            <input
+              id="import-sync-code-input"
+              type="text"
+              placeholder="コピーした引き継ぎコードをここに貼り付け..."
+              class="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:outline-none text-slate-900 dark:text-white"
+            />
+            <button
+              type="button"
+              onclick="restoreFromSyncCodeInput()"
+              class="px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-extrabold whitespace-nowrap cursor-pointer"
+            >
+              復元する
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. PC・スマホでの具体的な使い方ガイド -->
+        <div class="p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 space-y-2.5">
+          <div class="font-extrabold text-amber-900 dark:text-amber-300 flex items-center gap-1.5 text-xs sm:text-sm">
+            <i data-lucide="book-open-check" class="w-4 h-4 text-amber-500"></i>
+            <span>③ PC・スマホでのおすすめ運用方法</span>
+          </div>
+          <div class="space-y-2 text-[11px] sm:text-xs text-amber-950/90 dark:text-amber-100/85 leading-relaxed">
+            <div class="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/70 border border-amber-200/60 dark:border-amber-800/50">
+              <span class="font-extrabold text-indigo-600 dark:text-indigo-400">💻 PCでの使い方：</span>
+              このチャット画面をお気に入り登録して開くか、コードを <code>index.html</code> としてPCに保存（エクスポート）し、ChromeやEdgeで開いてブックマークしておくと毎日すぐ使えます。
+            </div>
+            <div class="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/70 border border-amber-200/60 dark:border-amber-800/50">
+              <span class="font-extrabold text-emerald-600 dark:text-emerald-400">📱 スマホでの使い方：</span>
+              スマホのGeminiアプリ（またはブラウザ）でこのページを開き、プレビューを表示します。または、無料公開サービス（GitHub Pages や Netlify Drop など）に <code>index.html</code> をドラッグ＆ドロップして自分専用のURLを作ると、Safari / Chrome の<strong>「ホーム画面に追加」</strong>から本物のアプリのようにワンタップ起動できます。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ======================================================================= -->
+  <!-- JavaScript ロジック -->
+  <!-- ======================================================================= -->
+  <script>
+    // 1. 月曜スタートの曜日定義
+    const DAYS_OF_WEEK = [
+      { key: 'mon', label: '月', fullLabel: '月曜日', offset: 0 },
+      { key: 'tue', label: '火', fullLabel: '火曜日', offset: 1 },
+      { key: 'wed', label: '水', fullLabel: '水曜日', offset: 2 },
+      { key: 'thu', label: '木', fullLabel: '木曜日', offset: 3 },
+      { key: 'fri', label: '金', fullLabel: '金曜日', offset: 4 },
+      { key: 'sat', label: '土', fullLabel: '土曜日', offset: 5 },
+      { key: 'sun', label: '日', fullLabel: '日曜日', offset: 6 },
+    ];
+
+    // 2. 4カテゴリー定義（仕事・家事・自己研鑽・健康の色分け）
+    const CATEGORIES = {
+      work: {
+        id: 'work',
+        name: '仕事',
+        sub: '業務・プロジェクト・生産性',
+        icon: 'briefcase',
+        hex: '#2563eb', // Blue
+        badgeBg: 'bg-blue-100 dark:bg-blue-950/90',
+        badgeText: 'text-blue-700 dark:text-blue-300',
+        badgeBorder: 'border-blue-200 dark:border-blue-800',
+        cardBg: 'bg-blue-50/60 dark:bg-blue-950/25',
+        cardBorder: 'border-blue-200/90 dark:border-blue-800/70',
+        headerBg: 'bg-blue-600',
+        accentBar: 'bg-blue-600',
+        checkActive: 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20',
+        cellDoneBg: 'bg-blue-50/75 dark:bg-blue-950/35 border-blue-300 dark:border-blue-700',
+        focusRing: 'focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500',
+      },
+      housework: {
+        id: 'housework',
+        name: '家事',
+        sub: '掃除・料理・暮らしの整頓',
+        icon: 'home',
+        hex: '#d97706', // Amber
+        badgeBg: 'bg-amber-100 dark:bg-amber-950/90',
+        badgeText: 'text-amber-800 dark:text-amber-300',
+        badgeBorder: 'border-amber-200 dark:border-amber-800',
+        cardBg: 'bg-amber-50/60 dark:bg-amber-950/25',
+        cardBorder: 'border-amber-200/90 dark:border-amber-800/70',
+        headerBg: 'bg-amber-500',
+        accentBar: 'bg-amber-500',
+        checkActive: 'bg-amber-500 hover:bg-amber-400 text-white shadow-amber-500/20',
+        cellDoneBg: 'bg-amber-50/75 dark:bg-amber-950/35 border-amber-300 dark:border-amber-700',
+        focusRing: 'focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500',
+      },
+      study: {
+        id: 'study',
+        name: '自己研鑽',
+        sub: '読書・語学・資格・スキル',
+        icon: 'graduation-cap',
+        hex: '#7c3aed', // Purple
+        badgeBg: 'bg-purple-100 dark:bg-purple-950/90',
+        badgeText: 'text-purple-700 dark:text-purple-300',
+        badgeBorder: 'border-purple-200 dark:border-purple-800',
+        cardBg: 'bg-purple-50/60 dark:bg-purple-950/25',
+        cardBorder: 'border-purple-200/90 dark:border-purple-800/70',
+        headerBg: 'bg-purple-600',
+        accentBar: 'bg-purple-600',
+        checkActive: 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/20',
+        cellDoneBg: 'bg-purple-50/75 dark:bg-purple-950/35 border-purple-300 dark:border-purple-700',
+        focusRing: 'focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500',
+      },
+      health: {
+        id: 'health',
+        name: '健康',
+        sub: '運動・ストレッチ・睡眠・食事',
+        icon: 'heart-pulse',
+        hex: '#059669', // Emerald
+        badgeBg: 'bg-emerald-100 dark:bg-emerald-950/90',
+        badgeText: 'text-emerald-700 dark:text-emerald-300',
+        badgeBorder: 'border-emerald-200 dark:border-emerald-800',
+        cardBg: 'bg-emerald-50/60 dark:bg-emerald-950/25',
+        cardBorder: 'border-emerald-200/90 dark:border-emerald-800/70',
+        headerBg: 'bg-emerald-600',
+        accentBar: 'bg-emerald-600',
+        checkActive: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20',
+        cellDoneBg: 'bg-emerald-50/75 dark:bg-emerald-950/35 border-emerald-300 dark:border-emerald-700',
+        focusRing: 'focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500',
+      }
+    };
+
+    const CATEGORY_ORDER = ['work', 'housework', 'study', 'health'];
+
+    // 3. 初期サンプルデータ（タスク基本定義＋デフォルト目標＋タスクごとのEXPランダム幅）
+    const INITIAL_HABITS = [
+      {
+        id: 'task-work-1',
+        category: 'work',
+        name: '企画書・提案資料の作成＆レビュー完了',
+        weeklyGoal: '新規プロジェクト提案書（全15ページ）を金曜までに完成させチーム承認を得る',
+        targetDays: 5,
+        expMin: 20,
+        expMax: 40,
+        dailyGoals: {
+          mon: '構成案と目次作成',
+          tue: '市場調査データ整理',
+          wed: '前半8ページ執筆',
+          thu: '後半7ページ＆図解',
+          fri: '社内レビュー＆修正',
+          sat: '予備日（休養）',
+          sun: '来週のタスク整理'
+        },
+        checks: { mon: true, tue: true, wed: true, thu: true, fri: false, sat: false, sun: false }
+      },
+      {
+        id: 'task-work-2',
+        category: 'work',
+        name: '朝の最優先タスク3つ集中（ディープワーク）',
+        weeklyGoal: '平日5日間、始業後90分はチャットを閉じて最重要タスクのみに集中する',
+        targetDays: 5,
+        expMin: 15,
+        expMax: 30,
+        dailyGoals: {
+          mon: '週次計画＆90分集中',
+          tue: '重要案件Aに90分',
+          wed: '資料作成に90分',
+          thu: '重要案件Bに90分',
+          fri: '週次振り返り＆集中',
+          sat: 'オフ',
+          sun: 'オフ'
+        },
+        checks: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false }
+      },
+      {
+        id: 'task-house-1',
+        category: 'housework',
+        name: '場所別15分リセット掃除＆整理整頓',
+        weeklyGoal: '毎日1箇所ずつ計7箇所を15分掃除し、週末に部屋全体がスッキリした状態を作る',
+        targetDays: 6,
+        expMin: 15,
+        expMax: 25,
+        dailyGoals: {
+          mon: '玄関＆靴箱の整理',
+          tue: '洗面台・鏡ピカピカ',
+          wed: 'デスク周りの配線整理',
+          thu: '冷蔵庫内の在庫整理',
+          fri: 'リビング床の水拭き',
+          sat: '寝室シーツ洗濯交換',
+          sun: 'キッチン換気扇周り'
+        },
+        checks: { mon: true, tue: true, wed: true, thu: false, fri: true, sat: false, sun: false }
+      },
+      {
+        id: 'task-house-2',
+        category: 'housework',
+        name: '自炊・作り置き＆夜のシンクゼロ習慣',
+        weeklyGoal: '週5日以上自炊し、毎晩寝る前にシンクの洗い物をゼロにしてキッチンをリセット',
+        targetDays: 7,
+        expMin: 15,
+        expMax: 35,
+        dailyGoals: {
+          mon: '野菜副菜3品作り置き',
+          tue: '魚メイン自炊＋片付け',
+          wed: '鶏むね肉料理＋片付け',
+          thu: 'パスタ＆スープ＋片付け',
+          fri: '冷蔵庫一掃炒め＋片付け',
+          sat: '週末買い出し＆下味冷凍',
+          sun: '翌週の献立メモ作成'
+        },
+        checks: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false }
+      },
+      {
+        id: 'task-study-1',
+        category: 'study',
+        name: '英語リスニング＆シャドーイング30分',
+        weeklyGoal: 'ビジネス英語教材のUnit 4〜6を完走し、重要フレーズ25個をスムーズに発話する',
+        targetDays: 6,
+        expMin: 20,
+        expMax: 35,
+        dailyGoals: {
+          mon: 'Unit 4 リスニング30分',
+          tue: 'Unit 4 シャドーイング',
+          wed: 'Unit 5 リスニング30分',
+          thu: 'Unit 5 シャドーイング',
+          fri: 'Unit 6 リスニング30分',
+          sat: '今週の総復習テスト',
+          sun: '洋画・海外ニュース視聴'
+        },
+        checks: { mon: true, tue: true, wed: true, thu: true, fri: false, sat: false, sun: false }
+      },
+      {
+        id: 'task-study-2',
+        category: 'study',
+        name: '専門書・技術書の読書＆アウトプットノート',
+        weeklyGoal: '今週中に技術書を1冊（全6章）読了し、実務に活かせる要点をノートにまとめる',
+        targetDays: 5,
+        expMin: 20,
+        expMax: 45,
+        dailyGoals: {
+          mon: '第1章（40P）＋メモ',
+          tue: '第2章（45P）＋メモ',
+          wed: '第3章（40P）＋メモ',
+          thu: '第4章（50P）＋メモ',
+          fri: '第5章（40P）＋メモ',
+          sat: '第6章読了＆全体まとめ',
+          sun: '予備読書日'
+        },
+        checks: { mon: true, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false }
+      },
+      {
+        id: 'task-health-1',
+        category: 'health',
+        name: '有酸素運動・筋トレ＆朝ストレッチ',
+        weeklyGoal: '週合計150分の運動と毎朝のストレッチで、肩こり解消と体力アップを達成する',
+        targetDays: 7,
+        expMin: 20,
+        expMax: 40,
+        dailyGoals: {
+          mon: '朝ストレッチ＋ラン30分',
+          tue: '体幹＆スクワット20分',
+          wed: '朝夕ストレッチ＋早歩き',
+          thu: '上半身筋トレ20分',
+          fri: '朝ストレッチ＋ラン30分',
+          sat: '公園ロングウォーク45分',
+          sun: '全身フォームローラーほぐし'
+        },
+        checks: { mon: true, tue: true, wed: true, thu: false, fri: false, sat: false, sun: false }
+      },
+      {
+        id: 'task-health-2',
+        category: 'health',
+        name: '水2L補給＆23時半就寝（7時間半睡眠）',
+        weeklyGoal: '毎日水2Lを飲み、22時半以降はスマホを手放して7時間半の質の高い睡眠をとる',
+        targetDays: 7,
+        expMin: 10,
+        expMax: 25,
+        dailyGoals: {
+          mon: '水2L＋23:30消灯',
+          tue: '水2L＋湯船15分入浴',
+          wed: '水2L＋23:30消灯',
+          thu: '水2L＋寝る前読書',
+          fri: '水2L＋カフェイン控えめ',
+          sat: '水2L＋朝同じ時間に起床',
+          sun: '水2L＋翌週へ睡眠調整'
+        },
+        checks: { mon: true, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false }
+      }
+    ];
+
+    // =======================================================================
+    // RPG 舞台（ステージ）＆ ステータス ＆ 装備ショップ定義
+    // =======================================================================
+    const EXP_PER_CHECK = 20; // デフォルト基準値
+    const EXP_PER_CAT_LEVEL = 120;
+    const EXP_PER_PLAYER_LEVEL = 200;
+
+    // 装備ショップのアイテム定義（ドット絵の見た目とステータスに直結）
+    const RPG_SHOP_ITEMS = [
+      // 武器 (weapon)
+      { id: 'wp_wood', slot: 'weapon', slotLabel: '武器', name: '木の剣', price: 0, bonusStat: 'ATK +5', atk: 5, def: 0, mag: 0, spd: 0, bladeColor: '#d97706', hiltColor: '#78350f', glowColor: null, emoji: '🗡️' },
+      { id: 'wp_iron', slot: 'weapon', slotLabel: '武器', name: '鋼のブレード', price: 100, bonusStat: 'ATK +18', atk: 18, def: 0, mag: 0, spd: 2, bladeColor: '#e2e8f0', hiltColor: '#475569', glowColor: null, emoji: '⚔️' },
+      { id: 'wp_flame', slot: 'weapon', slotLabel: '武器', name: 'フレイムソード', price: 240, bonusStat: 'ATK +32 / INT +10', atk: 32, def: 0, mag: 10, spd: 5, bladeColor: '#ef4444', hiltColor: '#f59e0b', glowColor: '#fca5a5', emoji: '🔥' },
+      { id: 'wp_mythril', slot: 'weapon', slotLabel: '武器', name: 'ミスリル銀剣', price: 400, bonusStat: 'ATK +48 / SPD +12', atk: 48, def: 5, mag: 15, spd: 12, bladeColor: '#38bdf8', hiltColor: '#e0f2fe', glowColor: '#bae6fd', emoji: '❄️' },
+      { id: 'wp_excalibur', slot: 'weapon', slotLabel: '武器', name: '伝説の聖剣エクスカリバー', price: 700, bonusStat: 'ATK +80 / 全能力UP', atk: 80, def: 15, mag: 25, spd: 20, bladeColor: '#fef08a', hiltColor: '#f59e0b', glowColor: '#fde047', emoji: '✨' },
+
+      // 盾 (shield)
+      { id: 'sh_wood', slot: 'shield', slotLabel: '盾', name: '木の盾', price: 0, bonusStat: 'DEF +5', atk: 0, def: 5, mag: 0, spd: 0, mainColor: '#92400e', trimColor: '#d97706', emoji: '🪵' },
+      { id: 'sh_knight', slot: 'shield', slotLabel: '盾', name: '騎士の紋章盾', price: 100, bonusStat: 'DEF +18', atk: 0, def: 18, mag: 0, spd: 0, mainColor: '#2563eb', trimColor: '#93c5fd', emoji: '🛡️' },
+      { id: 'sh_emerald', slot: 'shield', slotLabel: '盾', name: 'エメラルドガード', price: 240, bonusStat: 'DEF +32 / SPD +10', atk: 0, def: 32, mag: 8, spd: 10, mainColor: '#059669', trimColor: '#6ee7b7', emoji: '🟢' },
+      { id: 'sh_aegis', slot: 'shield', slotLabel: '盾', name: 'イージスの聖盾', price: 520, bonusStat: 'DEF +65 / INT +25', atk: 10, def: 65, mag: 25, spd: 12, mainColor: '#f59e0b', trimColor: '#fef08a', emoji: '🌟' },
+
+      // 鎧・衣装 (armor)
+      { id: 'ar_tunic', slot: 'armor', slotLabel: '鎧・服', name: '旅人のチュニック', price: 0, bonusStat: 'DEF +5 / SPD +5', atk: 0, def: 5, mag: 0, spd: 5, armorMain: '#64748b', armorLight: '#94a3b8', capeColor: null, emoji: '👕' },
+      { id: 'ar_ranger', slot: 'armor', slotLabel: '鎧・服', name: '疾風のレンジャー装束', price: 120, bonusStat: 'DEF +15 / SPD +22', atk: 5, def: 15, mag: 5, spd: 22, armorMain: '#059669', armorLight: '#6ee7b7', capeColor: '#065f46', emoji: '🌿' },
+      { id: 'ar_knight', slot: 'armor', slotLabel: '鎧・服', name: '蒼きパラディンアーマー', price: 260, bonusStat: 'DEF +35 / ATK +15', atk: 15, def: 35, mag: 5, spd: 8, armorMain: '#2563eb', armorLight: '#93c5fd', capeColor: '#1d4ed8', emoji: '🎽' },
+      { id: 'ar_mage', slot: 'armor', slotLabel: '鎧・服', name: '星詠みの賢者ローブ', price: 420, bonusStat: 'INT +48 / DEF +25', atk: 5, def: 25, mag: 48, spd: 15, armorMain: '#7c3aed', armorLight: '#c084fc', capeColor: '#be123c', emoji: '🔮' },
+      { id: 'ar_dragon', slot: 'armor', slotLabel: '鎧・服', name: '黄金の竜騎士アーマー', price: 720, bonusStat: 'DEF +70 / 全能力UP', atk: 30, def: 70, mag: 30, spd: 30, armorMain: '#f59e0b', armorLight: '#fde047', capeColor: '#e11d48', emoji: '🐉' },
+
+      // 頭装備 (helm)
+      { id: 'hm_bandana', slot: 'helm', slotLabel: '頭装備', name: '冒険者の赤ハチマキ', price: 0, bonusStat: 'SPD +3', atk: 2, def: 2, mag: 0, spd: 3, style: 'bandana', color: '#ef4444', accent: '#fca5a5', emoji: '🎀' },
+      { id: 'hm_circlet', slot: 'helm', slotLabel: '頭装備', name: '白銀のサークレット', price: 110, bonusStat: 'INT +15 / DEF +10', atk: 0, def: 10, mag: 15, spd: 5, style: 'circlet', color: '#93c5fd', accent: '#f59e0b', emoji: '💠' },
+      { id: 'hm_horns', slot: 'helm', slotLabel: '頭装備', name: 'ヴァイキングヘルム', price: 250, bonusStat: 'ATK +25 / DEF +20', atk: 25, def: 20, mag: 0, spd: 5, style: 'horns', color: '#94a3b8', accent: '#fef08a', emoji: ' horned' },
+      { id: 'hm_wizard', slot: 'helm', slotLabel: '頭装備', name: '大魔導士の三角帽', price: 390, bonusStat: 'INT +45 / SPD +15', atk: 5, def: 15, mag: 45, spd: 15, style: 'wizard', color: '#6d28d9', accent: '#facc15', emoji: '🧙' },
+      { id: 'hm_crown', slot: 'helm', slotLabel: '頭装備', name: 'グランドマスター王冠', price: 680, bonusStat: '全能力 +35', atk: 35, def: 35, mag: 35, spd: 35, style: 'crown', color: '#facc15', accent: '#ef4444', emoji: '👑' }
+    ];
+
+    const RPG_CATEGORY_META = {
+      work: { statCode: 'STR', statName: '実践力', icon: 'sword', color: 'blue', barBg: 'bg-blue-500', badgeBg: 'bg-blue-500/20 text-blue-300 border-blue-400/40' },
+      housework: { statCode: 'DEX', statName: '生活力', icon: 'home', color: 'amber', barBg: 'bg-amber-500', badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-400/40' },
+      study: { statCode: 'INT', statName: '知力', icon: 'book-open', color: 'purple', barBg: 'bg-purple-500', badgeBg: 'bg-purple-500/20 text-purple-300 border-purple-400/40' },
+      health: { statCode: 'VIT', statName: '体力', icon: 'heart-pulse', color: 'emerald', barBg: 'bg-emerald-500', badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40' }
+    };
+
+    const RPG_TITLES = [
+      { minLv: 1, title: '見習い冒険者', emoji: '🌱' },
+      { minLv: 3, title: '習慣の探求者', emoji: '🧭' },
+      { minLv: 5, title: 'ライフスタイル騎士', emoji: '⚔️' },
+      { minLv: 8, title: '継続の賢者', emoji: '🧙‍♂️' },
+      { minLv: 12, title: '習慣のグランドマスター', emoji: '👑' }
+    ];
+
+    const RPG_STAGES = [
+      {
+        id: 1,
+        name: '① 始まりの村',
+        shortName: '① 始まりの村',
+        emoji: '🏡',
+        desc: '冒険の第一歩！まずは4つの基本ステータスをバランスよく鍛えて旅立ちの準備を整えよう。',
+        questTitle: 'クエスト：仕事・家事・自己研鑽・健康をそれぞれ Lv.2 までアップ',
+        reqLevel: 2
+      },
+      {
+        id: 2,
+        name: '② 風車の草原',
+        shortName: '② 風車の草原',
+        emoji: '🌿',
+        desc: '爽やかな風が吹く草原エリア。日々のルーティンを定着させ、さらなる高みを目指そう！',
+        questTitle: 'クエスト：仕事・家事・自己研鑽・健康をそれぞれ Lv.3 までアップ',
+        reqLevel: 3
+      },
+      {
+        id: 3,
+        name: '③ 知恵と活力の城下町',
+        shortName: '③ 城下町',
+        emoji: '🏰',
+        desc: '多くの熟練者が集う活気ある城下町。4つの力をさらに磨き上げて一流の冒険者へ！',
+        questTitle: 'クエスト：仕事・家事・自己研鑽・健康をそれぞれ Lv.4 までアップ',
+        reqLevel: 4
+      },
+      {
+        id: 4,
+        name: '④ 習慣の霊峰',
+        shortName: '④ 習慣の霊峰',
+        emoji: '⛰️',
+        desc: '揺るぎない継続力を持つ者だけが登れる険しい霊峰。頂上はもうすぐそこだ！',
+        questTitle: 'クエスト：仕事・家事・自己研鑽・健康をそれぞれ Lv.6 までアップ',
+        reqLevel: 6
+      },
+      {
+        id: 5,
+        name: '⑤ 伝説の天空神殿',
+        shortName: '⑤ 天空神殿',
+        emoji: '🏛️',
+        desc: 'すべての習慣を極めし者が辿り着く伝説の神殿。さらなる高みへ限界突破を続けよう！',
+        questTitle: 'クエスト：仕事・家事・自己研鑽・健康をそれぞれ Lv.8 までアップ',
+        reqLevel: 8
+      }
+    ];
+
+    // =======================================================================
+    // カレンダー・週計算ユーティリティ
+    // =======================================================================
+    function formatDateYMD(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function parseDateYMD(ymdStr) {
+      const parts = (ymdStr || '').split('-').map(Number);
+      if (parts.length !== 3) return new Date();
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+
+    function getMondayOfDate(dateObj) {
+      const d = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+      const day = d.getDay();
+      const diffToMonday = day === 0 ? -6 : 1 - day;
+      d.setDate(d.getDate() + diffToMonday);
+      return d;
+    }
+
+    const realTodayDate = new Date();
+    const realTodayYMD = formatDateYMD(realTodayDate);
+    const currentWeekMondayDate = getMondayOfDate(realTodayDate);
+    const currentWeekMondayKey = formatDateYMD(currentWeekMondayDate);
+
+    function getRealTodayDayKey() {
+      const day = realTodayDate.getDay();
+      const idx = day === 0 ? 6 : day - 1;
+      return DAYS_OF_WEEK[idx].key;
+    }
+
+    function getMondayByOffset(weekOffset) {
+      const d = new Date(currentWeekMondayDate);
+      d.setDate(d.getDate() + weekOffset * 7);
+      return d;
+    }
+
+    function getWeekDatesFromMonday(mondayDate) {
+      return DAYS_OF_WEEK.map((d, idx) => {
+        const dateObj = new Date(mondayDate);
+        dateObj.setDate(mondayDate.getDate() + idx);
+        const y = dateObj.getFullYear();
+        const m = dateObj.getMonth() + 1;
+        const dateNum = dateObj.getDate();
+        const ymd = formatDateYMD(dateObj);
+        return {
+          ...d,
+          year: y,
+          month: m,
+          dateNum: dateNum,
+          shortDate: `${m}/${dateNum}`,
+          ymd: ymd,
+          isRealToday: ymd === realTodayYMD
+        };
+      });
+    }
+
+    // アプリ状態管理
+    let state = {
+      weekOffset: 0,
+      tasks: [],
+      weeklyRecords: {},
+      rpgShop: {
+        spentGold: 0,
+        ownedItems: ['wp_wood', 'sh_wood', 'ar_tunic', 'hm_bandana'],
+        equipped: {
+          weapon: 'wp_wood',
+          shield: 'sh_wood',
+          armor: 'ar_tunic',
+          helm: 'hm_bandana'
+        },
+        selectedSlotFilter: 'all',
+        isOpen: false
+      },
+      selectedTodayKey: getRealTodayDayKey(),
+      selectedCategory: 'all',
+      onlyUncompletedToday: false,
+      searchQuery: '',
+      modalSelectedCategory: 'work',
+      deleteConfirmId: null,
+      clearAllDailyConfirm: false,
+      darkMode: false,
+      viewingStageId: null,
+      recordViewMode: window.innerWidth < 768 ? 'cards' : 'table',
+      syncRoomKey: localStorage.getItem('habitflow_v4_sync_room_key') || 'default-habit-board',
+      cloudConnected: false
+    };
+
+    function getActiveWeekKey() {
+      return formatDateYMD(getMondayByOffset(state.weekOffset));
+    }
+
+    function getActiveWeekDates() {
+      return getWeekDatesFromMonday(getMondayByOffset(state.weekOffset));
+    }
+
+    function ensureWeekRecordExists(weekKey) {
+      if (!state.weeklyRecords[weekKey]) {
+        state.weeklyRecords[weekKey] = {};
+      }
+      const weekData = state.weeklyRecords[weekKey];
+      const isInitialCurrentWeek = (weekKey === currentWeekMondayKey && Object.keys(weekData).length === 0);
+
+      state.tasks.forEach(task => {
+        const minE = Number(task.expMin) || 15;
+        const maxE = Number(task.expMax) || 30;
+        const avgE = Math.round((minE + maxE) / 2);
+
+        if (!weekData[task.id]) {
+          const defaultChecks = isInitialCurrentWeek && task.initialChecks
+            ? { ...task.initialChecks }
+            : { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false };
+
+          const defaultExpGains = {};
+          DAYS_OF_WEEK.forEach(d => {
+            if (defaultChecks[d.key]) {
+              defaultExpGains[d.key] = avgE;
+            }
+          });
+
+          weekData[task.id] = {
+            weeklyGoal: task.defaultWeeklyGoal || '',
+            dailyGoals: { ...(task.defaultDailyGoals || { mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' }) },
+            checks: defaultChecks,
+            expGains: defaultExpGains
+          };
+        } else {
+          if (!weekData[task.id].expGains) {
+            weekData[task.id].expGains = {};
+          }
+        }
+      });
+    }
+
+    function getActiveWeekHabits() {
+      const weekKey = getActiveWeekKey();
+      ensureWeekRecordExists(weekKey);
+      const weekData = state.weeklyRecords[weekKey];
+
+      return state.tasks.map(task => {
+        const rec = weekData[task.id] || {
+          weeklyGoal: task.defaultWeeklyGoal || '',
+          dailyGoals: { ...(task.defaultDailyGoals || {}) },
+          checks: { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false },
+          expGains: {}
+        };
+        return {
+          id: task.id,
+          category: task.category,
+          name: task.name,
+          targetDays: task.targetDays,
+          expMin: Number(task.expMin) || 15,
+          expMax: Number(task.expMax) || 30,
+          weeklyGoal: rec.weeklyGoal,
+          dailyGoals: rec.dailyGoals,
+          checks: rec.checks,
+          expGains: rec.expGains || {}
+        };
+      });
+    }
+
+    function ensureRpgShopDefaults() {
+      if (!state.rpgShop) {
+        state.rpgShop = {
+          spentGold: 0,
+          ownedItems: ['wp_wood', 'sh_wood', 'ar_tunic', 'hm_bandana'],
+          equipped: { weapon: 'wp_wood', shield: 'sh_wood', armor: 'ar_tunic', helm: 'hm_bandana' },
+          selectedSlotFilter: 'all'
+        };
+      }
+      if (!Array.isArray(state.rpgShop.ownedItems)) {
+        state.rpgShop.ownedItems = ['wp_wood', 'sh_wood', 'ar_tunic', 'hm_bandana'];
+      }
+      ['wp_wood', 'sh_wood', 'ar_tunic', 'hm_bandana'].forEach(baseId => {
+        if (!state.rpgShop.ownedItems.includes(baseId)) {
+          state.rpgShop.ownedItems.push(baseId);
+        }
+      });
+      if (!state.rpgShop.equipped) {
+        state.rpgShop.equipped = { weapon: 'wp_wood', shield: 'sh_wood', armor: 'ar_tunic', helm: 'hm_bandana' };
+      }
+      if (!state.rpgShop.selectedSlotFilter) {
+        state.rpgShop.selectedSlotFilter = 'all';
+      }
+      if (typeof state.rpgShop.isOpen !== 'boolean') {
+        state.rpgShop.isOpen = false;
+      }
+    }
+
+    function setupInitialSampleData() {
+      state.tasks = INITIAL_HABITS.map(h => ({
+        id: h.id,
+        category: h.category,
+        name: h.name,
+        targetDays: h.targetDays,
+        expMin: h.expMin || 15,
+        expMax: h.expMax || 30,
+        defaultWeeklyGoal: h.weeklyGoal,
+        defaultDailyGoals: { ...h.dailyGoals },
+        initialChecks: { ...h.checks }
+      }));
+      state.weeklyRecords = {};
+      ensureRpgShopDefaults();
+      ensureWeekRecordExists(currentWeekMondayKey);
+    }
+
+    // Smart LocalStorage Load & Merge to Prevent Reset on Update
+    function loadState() {
+      try {
+        const savedV4 = localStorage.getItem('habitflow_v4_multiweek_data');
+        if (savedV4) {
+          const parsed = JSON.parse(savedV4);
+          if (parsed && Array.isArray(parsed.tasks) && parsed.tasks.length > 0) {
+            state.tasks = parsed.tasks.map(t => ({
+              ...t,
+              expMin: Number(t.expMin) || 15,
+              expMax: Number(t.expMax) || 30
+            }));
+            state.weeklyRecords = parsed.weeklyRecords || {};
+            if (parsed.rpgShop) {
+              state.rpgShop = parsed.rpgShop;
+            }
+            ensureRpgShopDefaults();
+
+            // Ensure any new default tasks from INITIAL_HABITS are also present without overwriting user edits
+            INITIAL_HABITS.forEach(sample => {
+              if (!state.tasks.some(t => t.id === sample.id || t.name === sample.name)) {
+                state.tasks.push({
+                  id: sample.id,
+                  category: sample.category,
+                  name: sample.name,
+                  targetDays: sample.targetDays,
+                  expMin: sample.expMin || 15,
+                  expMax: sample.expMax || 30,
+                  defaultWeeklyGoal: sample.weeklyGoal,
+                  defaultDailyGoals: { ...sample.dailyGoals },
+                  initialChecks: { ...sample.checks }
+                });
+              }
+            });
+
+            ensureWeekRecordExists(getActiveWeekKey());
+          } else {
+            setupInitialSampleData();
+          }
+        } else {
+          const savedV3 = localStorage.getItem('habitflow_v3_step_data');
+          if (savedV3) {
+            const parsedV3 = JSON.parse(savedV3);
+            if (Array.isArray(parsedV3) && parsedV3.length > 0) {
+              state.tasks = parsedV3.map(h => ({
+                id: h.id,
+                category: h.category,
+                name: h.name,
+                targetDays: h.targetDays || 5,
+                expMin: h.expMin || 15,
+                expMax: h.expMax || 30,
+                defaultWeeklyGoal: h.weeklyGoal || '',
+                defaultDailyGoals: { ...(h.dailyGoals || {}) },
+                initialChecks: { ...(h.checks || {}) }
+              }));
+              state.weeklyRecords = {};
+              ensureRpgShopDefaults();
+              ensureWeekRecordExists(currentWeekMondayKey);
+              saveState();
+            } else {
+              setupInitialSampleData();
+            }
+          } else {
+            setupInitialSampleData();
+          }
+        }
+
+        const savedTheme = localStorage.getItem('habitflow_v3_theme');
+        if (savedTheme === 'dark') {
+          state.darkMode = true;
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {
+        console.error(e);
+        setupInitialSampleData();
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem('habitflow_v4_multiweek_data', JSON.stringify({
+          tasks: state.tasks,
+          weeklyRecords: state.weeklyRecords,
+          rpgShop: state.rpgShop
+        }));
+        if (typeof window.pushStateToCloud === 'function') {
+          window.pushStateToCloud();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    window.scrollToSection = function(sectionId) {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
+    window.setRecordViewMode = function(mode) {
+      state.recordViewMode = mode;
+      renderAll();
+    };
+
+    window.setTodayKey = function(dayKey) {
+      state.selectedTodayKey = dayKey;
+      renderAll();
+    };
+
+    window.selectCategoryFilter = function(catId) {
+      state.selectedCategory = state.selectedCategory === catId && catId !== 'all' ? 'all' : catId;
+      renderAll();
+    };
+
+    window.resetFilters = function() {
+      state.selectedCategory = 'all';
+      state.onlyUncompletedToday = false;
+      state.searchQuery = '';
+      document.getElementById('filter-uncompleted-today').checked = false;
+      document.getElementById('search-input').value = '';
+      renderAll();
+    };
+
+    window.requestDeleteHabit = function(id) {
+      state.deleteConfirmId = id;
+      renderStep2MatrixTable();
+      lucide.createIcons();
+    };
+
+    window.cancelDeleteHabit = function() {
+      state.deleteConfirmId = null;
+      renderStep2MatrixTable();
+      lucide.createIcons();
+    };
+
+    window.confirmDeleteHabit = function(id) {
+      const target = state.tasks.find(h => h.id === id);
+      state.tasks = state.tasks.filter(h => h.id !== id);
+      state.deleteConfirmId = null;
+      saveState();
+      renderAll();
+      if (target) showToast(`「${target.name}」を削除しました`);
+    };
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = 'pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900/95 dark:bg-indigo-600 text-white text-xs sm:text-sm font-bold shadow-xl border border-slate-700 dark:border-indigo-400 animate-fadeIn';
+      toast.innerHTML = `
+        <span>✨</span>
+        <span>${escapeHtml(message)}</span>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.25s ease';
+        setTimeout(() => toast.remove(), 260);
+      }, 3200);
+    }
+
+    function showStageClearBanner(title, subtitle) {
+      const container = document.getElementById('stage-clear-banner-container');
+      if (!container) return;
+      const banner = document.createElement('div');
+      banner.className = 'pointer-events-auto w-full rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-500 text-slate-950 p-4 shadow-2xl border-2 border-white/80 animate-pop text-center';
+      banner.innerHTML = `
+        <div class="text-xs font-black tracking-widest uppercase">🎉 STAGE QUEST CLEAR! 🎉</div>
+        <div class="text-base sm:text-lg font-extrabold mt-0.5">${escapeHtml(title)}</div>
+        <div class="text-xs font-bold mt-0.5 opacity-90">${escapeHtml(subtitle)}</div>
+      `;
+      container.appendChild(banner);
+      setTimeout(() => {
+        banner.style.opacity = '0';
+        banner.style.transition = 'opacity 0.35s ease';
+        setTimeout(() => banner.remove(), 360);
+      }, 4500);
+    }
+
+    function spawnFloatingExp(event, gainedExp, isHighRoll) {
+      if (!event || !event.currentTarget) return;
+      const btn = event.currentTarget;
+      const rect = btn.getBoundingClientRect();
+      const floater = document.createElement('div');
+      floater.className = `fixed z-50 pointer-events-none text-xs font-black px-2 py-0.5 rounded-full shadow-md animate-floatUp ${
+        isHighRoll
+          ? 'bg-gradient-to-r from-amber-400 to-rose-500 text-white scale-110'
+          : 'bg-amber-400 text-slate-950'
+      }`;
+      floater.style.left = `${rect.left + rect.width / 2 - 42}px`;
+      floater.style.top = `${rect.top - 8}px`;
+      floater.textContent = `${isHighRoll ? '🔥大成功! ' : ''}+${gainedExp} EXP & +${gainedExp}G!`;
+      document.body.appendChild(floater);
+      setTimeout(() => floater.remove(), 950);
+    }
+
+    function rollRandomExp(minVal, maxVal) {
+      const min = Math.min(Number(minVal) || 15, Number(maxVal) || 30);
+      const max = Math.max(Number(minVal) || 15, Number(maxVal) || 30);
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function changeWeekByOffset(newOffset) {
+      state.weekOffset = newOffset;
+      ensureWeekRecordExists(getActiveWeekKey());
+      renderAll();
+    }
+
+    function copyGoalsFromPreviousWeek() {
+      const prevMonday = getMondayByOffset(state.weekOffset - 1);
+      const prevWeekKey = formatDateYMD(prevMonday);
+      ensureWeekRecordExists(prevWeekKey);
+
+      const currentWeekKey = getActiveWeekKey();
+      ensureWeekRecordExists(currentWeekKey);
+
+      const prevData = state.weeklyRecords[prevWeekKey];
+      const currData = state.weeklyRecords[currentWeekKey];
+
+      state.tasks.forEach(task => {
+        if (prevData[task.id]) {
+          currData[task.id] = {
+            weeklyGoal: prevData[task.id].weeklyGoal || task.defaultWeeklyGoal || '',
+            dailyGoals: { ...(prevData[task.id].dailyGoals || {}) },
+            checks: currData[task.id]?.checks || { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false }
+          };
+        }
+      });
+
+      saveState();
+      renderAll();
+      showToast('📋 前の週の週間目標・各日目標をこの週にコピーしました！');
+    }
+
+    function clearCurrentWeekChecks() {
+      const weekKey = getActiveWeekKey();
+      ensureWeekRecordExists(weekKey);
+      const weekData = state.weeklyRecords[weekKey];
+      state.tasks.forEach(task => {
+        if (weekData[task.id]) {
+          weekData[task.id].checks = { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false };
+          weekData[task.id].expGains = {};
+        }
+      });
+      saveState();
+      renderAll();
+      showToast('表示中の週の達成チェックをリセットしました');
+    }
+
+    window.updateTaskName = function(taskId, newName) {
+      const trimmed = (newName || '').trim();
+      if (!trimmed) return;
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.name = trimmed;
+        saveState();
+        renderAll();
+        showToast('タスク名を更新しました');
+      }
+    };
+
+    window.updateWeeklyGoal = function(taskId, newGoal) {
+      const weekKey = getActiveWeekKey();
+      ensureWeekRecordExists(weekKey);
+      if (state.weeklyRecords[weekKey][taskId]) {
+        state.weeklyRecords[weekKey][taskId].weeklyGoal = newGoal.trim();
+      }
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.defaultWeeklyGoal = newGoal.trim();
+      }
+      saveState();
+      renderStep2MatrixTable();
+      renderMobileDailyCards();
+      lucide.createIcons();
+      showToast('🎯 今週の目標を保存しました');
+    };
+
+    window.updateDailyGoal = function(taskId, dayKey, newText) {
+      const weekKey = getActiveWeekKey();
+      ensureWeekRecordExists(weekKey);
+      if (state.weeklyRecords[weekKey][taskId]) {
+        if (!state.weeklyRecords[weekKey][taskId].dailyGoals) {
+          state.weeklyRecords[weekKey][taskId].dailyGoals = {};
+        }
+        state.weeklyRecords[weekKey][taskId].dailyGoals[dayKey] = newText.trim();
+      }
+      saveState();
+      showToast('📌 各日の目標を保存しました');
+    };
+
+    window.clearTaskDailyGoals = function(taskId) {
+      const weekKey = getActiveWeekKey();
+      ensureWeekRecordExists(weekKey);
+      if (state.weeklyRecords[weekKey][taskId]) {
+        state.weeklyRecords[weekKey][taskId].dailyGoals = {
+          mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: ''
+        };
+      }
+      saveState();
+      renderAll();
+      const task = state.tasks.find(t => t.id === taskId);
+      showToast(`🧹 「${task ? task.name : 'タスク'}」の月〜日の目標をクリアしました`);
+    };
+
+    let clearAllDailyTimer = null;
+    window.requestClearAllDailyGoals = function() {
+      const btn = document.getElementById('btn-clear-all-daily-goals');
+      const label = document.getElementById('label-clear-all-daily-goals');
+      if (!state.clearAllDailyConfirm) {
+        state.clearAllDailyConfirm = true;
+        if (label) label.textContent = 'もう一度押すと全クリア確定';
+        if (btn) {
+          btn.className = 'inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-600 shadow-xs transition-colors cursor-pointer';
+        }
+        if (clearAllDailyTimer) clearTimeout(clearAllDailyTimer);
+        clearAllDailyTimer = setTimeout(() => {
+          resetClearAllDailyConfirmUI();
+        }, 4000);
+        return;
+      }
+
+      const weekKey = getActiveWeekKey();
+      ensureWeekRecordExists(weekKey);
+      const weekData = state.weeklyRecords[weekKey];
+      state.tasks.forEach(task => {
+        if (weekData[task.id]) {
+          weekData[task.id].dailyGoals = {
+            mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: ''
+          };
+        }
+      });
+
+      resetClearAllDailyConfirmUI();
+      saveState();
+      renderAll();
+      showToast('🧹 この週のすべての「各日の目標（月〜日）」を一括クリアしました！');
+    };
+
+    function resetClearAllDailyConfirmUI() {
+      state.clearAllDailyConfirm = false;
+      const btn = document.getElementById('btn-clear-all-daily-goals');
+      const label = document.getElementById('label-clear-all-daily-goals');
+      if (label) label.textContent = '各日の目標を一括クリア';
+      if (btn) {
+        btn.className = 'inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:hover:bg-rose-900/70 dark:text-rose-300 border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer';
+      }
+    }
+
+    window.toggleCheck = function(taskId, dayKey, event) {
+      const beforeRpg = calculateRpgStats();
+      const weekKey = getActiveWeekKey();
+      ensureWeekRecordExists(weekKey);
+      const rec = state.weeklyRecords[weekKey][taskId];
+      if (!rec) return;
+
+      const taskObj = state.tasks.find(t => t.id === taskId);
+      const expMin = taskObj ? (Number(taskObj.expMin) || 15) : 15;
+      const expMax = taskObj ? (Number(taskObj.expMax) || 30) : 30;
+
+      const newVal = !rec.checks[dayKey];
+      rec.checks[dayKey] = newVal;
+      if (!rec.expGains) rec.expGains = {};
+
+      let rolledExp = 0;
+      if (newVal) {
+        rolledExp = rollRandomExp(expMin, expMax);
+        rec.expGains[dayKey] = rolledExp;
+        const isHighRoll = expMax > expMin && rolledExp >= expMin + (expMax - expMin) * 0.8;
+        if (event) {
+          spawnFloatingExp(event, rolledExp, isHighRoll);
+        }
+      } else {
+        delete rec.expGains[dayKey];
+      }
+
+      saveState();
+      const afterRpg = calculateRpgStats();
+
+      if (newVal && afterRpg.activeStage.id > beforeRpg.activeStage.id) {
+        showStageClearBanner(
+          `「${beforeRpg.activeStage.name}」のクエスト達成！`,
+          `新たな舞台「${afterRpg.activeStage.name}」へ進みました！`
+        );
+        state.viewingStageId = null;
+      } else if (newVal && afterRpg.playerLevel > beforeRpg.playerLevel) {
+        showToast(`🎉 LEVEL UP! 総合レベルが Lv.${afterRpg.playerLevel} に上がりました！(+${rolledExp} EXP)`);
+      }
+
+      renderAll();
+    };
+
+    function calculateRpgStats() {
+      ensureRpgShopDefaults();
+      const catCheckCounts = { work: 0, housework: 0, study: 0, health: 0 };
+      const catExpTotals = { work: 0, housework: 0, study: 0, health: 0 };
+      const taskMap = {};
+      state.tasks.forEach(t => {
+        taskMap[t.id] = t;
+      });
+
+      Object.values(state.weeklyRecords).forEach(weekObj => {
+        Object.entries(weekObj || {}).forEach(([taskId, rec]) => {
+          const task = taskMap[taskId];
+          if (!task || !catCheckCounts.hasOwnProperty(task.category)) return;
+          const cat = task.category;
+          const checks = rec.checks || {};
+          const expGains = rec.expGains || {};
+          const fallbackAvg = Math.round(((Number(task.expMin) || 15) + (Number(task.expMax) || 30)) / 2);
+
+          DAYS_OF_WEEK.forEach(d => {
+            if (checks[d.key]) {
+              catCheckCounts[cat] += 1;
+              const gained = Number(expGains[d.key]) || fallbackAvg;
+              catExpTotals[cat] += gained;
+            }
+          });
+        });
+      });
+
+      const categories = {};
+      let totalExp = 0;
+
+      CATEGORY_ORDER.forEach(catId => {
+        const checks = catCheckCounts[catId] || 0;
+        const exp = catExpTotals[catId] || 0;
+        totalExp += exp;
+        const level = Math.floor(exp / EXP_PER_CAT_LEVEL) + 1;
+        const currentLevelExp = exp % EXP_PER_CAT_LEVEL;
+        const nextLevelPct = Math.min(100, Math.round((currentLevelExp / EXP_PER_CAT_LEVEL) * 100));
+        const remainExpForNext = EXP_PER_CAT_LEVEL - currentLevelExp;
+
+        categories[catId] = {
+          catId,
+          checks,
+          exp,
+          level,
+          currentLevelExp,
+          expForNext: EXP_PER_CAT_LEVEL,
+          nextLevelPct,
+          remainExpForNext
+        };
+      });
+
+      const playerLevel = Math.floor(totalExp / EXP_PER_PLAYER_LEVEL) + 1;
+      const playerLevelExp = totalExp % EXP_PER_PLAYER_LEVEL;
+      const playerNextPct = Math.min(100, Math.round((playerLevelExp / EXP_PER_PLAYER_LEVEL) * 100));
+
+      // 獲得EXPに応じてゴールドも獲得（初期ボーナス50G＋累計EXPと同量のG）
+      const totalEarnedGold = 50 + totalExp;
+      const currentGold = Math.max(0, totalEarnedGold - (Number(state.rpgShop.spentGold) || 0));
+
+      let currentTitle = RPG_TITLES[0];
+      RPG_TITLES.forEach(t => {
+        if (playerLevel >= t.minLv) currentTitle = t;
+      });
+
+      let activeStageIndex = 0;
+      for (let i = 0; i < RPG_STAGES.length; i++) {
+        const stg = RPG_STAGES[i];
+        const allCleared = CATEGORY_ORDER.every(catId => categories[catId].level >= stg.reqLevel);
+        if (allCleared) {
+          activeStageIndex = Math.min(i + 1, RPG_STAGES.length - 1);
+        } else {
+          activeStageIndex = i;
+          break;
+        }
+      }
+
+      const activeStage = RPG_STAGES[activeStageIndex];
+
+      return {
+        totalExp,
+        totalEarnedGold,
+        currentGold,
+        playerLevel,
+        playerLevelExp,
+        playerNextPct,
+        currentTitle,
+        categories,
+        activeStageIndex,
+        activeStage
+      };
+    }
+
+    window.selectViewingStage = function(stageId) {
+      state.viewingStageId = stageId;
+      renderBottomRpgSection();
+      lucide.createIcons();
+    };
+
+    window.setShopSlotFilter = function(slot) {
+      ensureRpgShopDefaults();
+      state.rpgShop.selectedSlotFilter = slot;
+      state.rpgShop.isOpen = true;
+      renderBottomRpgSection();
+      lucide.createIcons();
+    };
+
+    window.toggleRpgShopOpen = function() {
+      ensureRpgShopDefaults();
+      state.rpgShop.isOpen = !state.rpgShop.isOpen;
+      saveState();
+      renderBottomRpgSection();
+      lucide.createIcons();
+    };
+
+    window.buyOrEquipShopItem = function(itemId) {
+      ensureRpgShopDefaults();
+      const item = RPG_SHOP_ITEMS.find(i => i.id === itemId);
+      if (!item) return;
+
+      const isOwned = state.rpgShop.ownedItems.includes(itemId);
+      if (isOwned) {
+        state.rpgShop.equipped[item.slot] = itemId;
+        saveState();
+        renderBottomRpgSection();
+        lucide.createIcons();
+        showToast(`${item.emoji} 「${item.name}」を装備しました！主人公の見た目が変化しました！`);
+        return;
+      }
+
+      const rpg = calculateRpgStats();
+      if (rpg.currentGold < item.price) {
+        showToast(`💰 ゴールドが足りません（あと ${item.price - rpg.currentGold} G 必要です）`);
+        return;
+      }
+
+      state.rpgShop.spentGold = (Number(state.rpgShop.spentGold) || 0) + item.price;
+      state.rpgShop.ownedItems.push(itemId);
+      state.rpgShop.equipped[item.slot] = itemId;
+      saveState();
+      renderBottomRpgSection();
+      lucide.createIcons();
+      showToast(`🛍️ 「${item.name}」を購入して装備しました！`);
+    };
+
+    // 装備中のアイテム（武器・盾・鎧・頭装備）に合わせて見た目がリアルタイムに変わる16x16ドット絵SVG
+    function getHeroPixelArtSvg(rpg) {
+      ensureRpgShopDefaults();
+      const eq = state.rpgShop.equipped;
+      const weaponItem = RPG_SHOP_ITEMS.find(i => i.id === eq.weapon) || RPG_SHOP_ITEMS[0];
+      const shieldItem = RPG_SHOP_ITEMS.find(i => i.id === eq.shield) || RPG_SHOP_ITEMS.find(i => i.id === 'sh_wood');
+      const armorItem = RPG_SHOP_ITEMS.find(i => i.id === eq.armor) || RPG_SHOP_ITEMS.find(i => i.id === 'ar_tunic');
+      const helmItem = RPG_SHOP_ITEMS.find(i => i.id === eq.helm) || RPG_SHOP_ITEMS.find(i => i.id === 'hm_bandana');
+
+      const armorMain = armorItem.armorMain || '#64748b';
+      const armorLight = armorItem.armorLight || '#94a3b8';
+      const capeColor = armorItem.capeColor;
+      const bladeColor = weaponItem.bladeColor || '#e2e8f0';
+      const hiltColor = weaponItem.hiltColor || '#f59e0b';
+      const shieldMain = shieldItem.mainColor || '#92400e';
+      const shieldTrim = shieldItem.trimColor || '#d97706';
+
+      let helmSvg = '';
+      if (helmItem.style === 'crown') {
+        helmSvg = `
+          <rect x="5" y="1" width="6" height="2" fill="${helmItem.color}" />
+          <rect x="5" y="0" width="1" height="1" fill="#fef08a" />
+          <rect x="7" y="0" width="2" height="1" fill="#fef08a" />
+          <rect x="10" y="0" width="1" height="1" fill="#fef08a" />
+          <rect x="7" y="1" width="2" height="1" fill="${helmItem.accent}" />
+        `;
+      } else if (helmItem.style === 'wizard') {
+        helmSvg = `
+          <rect x="7" y="0" width="2" height="1" fill="${helmItem.color}" />
+          <rect x="6" y="1" width="4" height="1" fill="${helmItem.color}" />
+          <rect x="5" y="2" width="6" height="1" fill="${helmItem.accent}" />
+          <rect x="3" y="3" width="10" height="1" fill="${helmItem.color}" />
+        `;
+      } else if (helmItem.style === 'horns') {
+        helmSvg = `
+          <rect x="3" y="1" width="1" height="2" fill="${helmItem.accent}" />
+          <rect x="12" y="1" width="1" height="2" fill="${helmItem.accent}" />
+          <rect x="4" y="2" width="8" height="2" fill="${helmItem.color}" />
+        `;
+      } else if (helmItem.style === 'circlet') {
+        helmSvg = `
+          <rect x="4" y="2" width="7" height="1" fill="${helmItem.color}" />
+          <rect x="7" y="2" width="2" height="1" fill="${helmItem.accent}" />
+        `;
+      } else {
+        helmSvg = `
+          <rect x="4" y="3" width="7" height="1" fill="${helmItem.color}" />
+          <rect x="3" y="4" width="1" height="2" fill="${helmItem.color}" />
+        `;
+      }
+
+      return `
+        <svg viewBox="0 0 16 16" class="w-20 h-20 sm:w-24 sm:h-24 pixel-hero-bob drop-shadow-[0_6px_12px_rgba(0,0,0,0.6)]" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+          <!-- 武器・高ランク鎧のオーラ -->
+          ${weaponItem.glowColor ? `
+            <rect x="1" y="2" width="14" height="12" fill="${weaponItem.glowColor}" opacity="0.14" />
+          ` : ''}
+
+          <!-- マント背面 (鎧に連動) -->
+          ${capeColor ? `
+            <rect x="3" y="6" width="9" height="7" fill="${capeColor}" />
+            <rect x="2" y="8" width="2" height="5" fill="${capeColor}" />
+          ` : ''}
+
+          <!-- ベースの髪 -->
+          <rect x="5" y="2" width="6" height="2" fill="#78350f" />
+          <rect x="4" y="3" width="2" height="3" fill="#78350f" />
+          <rect x="10" y="3" width="1" height="2" fill="#78350f" />
+
+          <!-- 頭装備 (ショップ装備に連動) -->
+          ${helmSvg}
+
+          <!-- 顔・目 -->
+          <rect x="5" y="4" width="6" height="3" fill="#fed7aa" />
+          <rect x="6" y="5" width="1" height="1" fill="#0f172a" />
+          <rect x="9" y="5" width="1" height="1" fill="#0f172a" />
+
+          <!-- 胴体・アーマー (ショップ鎧に連動) -->
+          <rect x="5" y="7" width="6" height="5" fill="${armorMain}" />
+          <rect x="6" y="7" width="4" height="3" fill="${armorLight}" />
+          <rect x="5" y="10" width="6" height="1" fill="#78350f" />
+          <rect x="7" y="10" width="2" height="1" fill="#facc15" />
+
+          <!-- 肩当て -->
+          <rect x="4" y="7" width="1" height="2" fill="${armorLight}" />
+          <rect x="11" y="7" width="1" height="2" fill="${armorLight}" />
+
+          <!-- 足・ブーツ -->
+          <rect x="5" y="12" width="2" height="2" fill="#334155" />
+          <rect x="9" y="12" width="2" height="2" fill="#334155" />
+          <rect x="5" y="14" width="2" height="1" fill="#451a03" />
+          <rect x="9" y="14" width="2" height="1" fill="#451a03" />
+
+          <!-- 盾 (ショップ盾に連動) -->
+          <rect x="2" y="7" width="3" height="5" fill="${shieldMain}" />
+          <rect x="3" y="8" width="1" height="3" fill="${shieldTrim}" />
+          <rect x="2" y="7" width="3" height="1" fill="${shieldTrim}" />
+
+          <!-- 剣 (ショップ武器に連動) -->
+          <rect x="13" y="1" width="1" height="7" fill="${bladeColor}" />
+          <rect x="12" y="2" width="1" height="5" fill="#ffffff" opacity="0.65" />
+          <rect x="11" y="8" width="4" height="1" fill="${hiltColor}" />
+          <rect x="12" y="9" width="2" height="2" fill="#78350f" />
+        </svg>
+      `;
+    }
+
+    // 4カテゴリーのレベル＋ショップで装備中のアイテムから主人公のRPG戦闘ステータスを計算するヘルパー
+    function calculateHeroDetailedStatus(rpg) {
+      ensureRpgShopDefaults();
+      const eq = state.rpgShop.equipped;
+      const weaponItem = RPG_SHOP_ITEMS.find(i => i.id === eq.weapon) || RPG_SHOP_ITEMS[0];
+      const shieldItem = RPG_SHOP_ITEMS.find(i => i.id === eq.shield) || RPG_SHOP_ITEMS.find(i => i.id === 'sh_wood');
+      const armorItem = RPG_SHOP_ITEMS.find(i => i.id === eq.armor) || RPG_SHOP_ITEMS.find(i => i.id === 'ar_tunic');
+      const helmItem = RPG_SHOP_ITEMS.find(i => i.id === eq.helm) || RPG_SHOP_ITEMS.find(i => i.id === 'hm_bandana');
+
+      const equippedList = [weaponItem, shieldItem, armorItem, helmItem];
+      const gearAtk = equippedList.reduce((s, i) => s + (i.atk || 0), 0);
+      const gearDef = equippedList.reduce((s, i) => s + (i.def || 0), 0);
+      const gearMag = equippedList.reduce((s, i) => s + (i.mag || 0), 0);
+      const gearSpd = equippedList.reduce((s, i) => s + (i.spd || 0), 0);
+
+      const workLv = rpg.categories.work.level;
+      const houseLv = rpg.categories.housework.level;
+      const studyLv = rpg.categories.study.level;
+      const healthLv = rpg.categories.health.level;
+
+      const hp = 100 + healthLv * 35 + rpg.playerLevel * 15 + gearDef * 2;
+      const mp = 40 + studyLv * 25 + rpg.playerLevel * 10 + gearMag * 2;
+      const atk = 15 + workLv * 12 + rpg.playerLevel * 4 + gearAtk;
+      const def = 12 + houseLv * 10 + healthLv * 4 + rpg.playerLevel * 3 + gearDef;
+      const mag = 14 + studyLv * 12 + rpg.playerLevel * 4 + gearMag;
+      const spd = 15 + houseLv * 10 + workLv * 4 + rpg.playerLevel * 3 + gearSpd;
+
+      return {
+        hp,
+        mp,
+        atk,
+        def,
+        mag,
+        spd,
+        combatPower: hp + mp + (atk + def + mag + spd) * 3,
+        weaponItem,
+        shieldItem,
+        armorItem,
+        helmItem
+      };
+    }
+
+    function renderHeaderControls() {
+      const weekDates = getActiveWeekDates();
+      const firstDay = weekDates[0];
+      const lastDay = weekDates[6];
+
+      const rangeLabel = document.getElementById('week-range-label');
+      if (rangeLabel) {
+        rangeLabel.textContent = `${firstDay.year}年 ${firstDay.month}月${firstDay.dateNum}日(月) 〜 ${lastDay.month}月${lastDay.dateNum}日(日)`;
+      }
+
+      const badge = document.getElementById('week-relative-badge');
+      if (badge) {
+        if (state.weekOffset === 0) {
+          badge.textContent = '今週';
+          badge.className = 'text-[10px] sm:text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-indigo-600 text-white shrink-0';
+        } else if (state.weekOffset === 1) {
+          badge.textContent = '来週';
+          badge.className = 'text-[10px] sm:text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-600 text-white shrink-0';
+        } else if (state.weekOffset === -1) {
+          badge.textContent = '先週';
+          badge.className = 'text-[10px] sm:text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-amber-600 text-white shrink-0';
+        } else if (state.weekOffset > 1) {
+          badge.textContent = `${state.weekOffset}週間後`;
+          badge.className = 'text-[10px] sm:text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-600 text-white shrink-0';
+        } else {
+          badge.textContent = `${Math.abs(state.weekOffset)}週間前`;
+          badge.className = 'text-[10px] sm:text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-slate-600 text-white shrink-0';
+        }
+      }
+
+      const sec1Title = document.getElementById('section1-title');
+      if (sec1Title) {
+        sec1Title.textContent = state.weekOffset === 0
+          ? '今週の目標'
+          : `${firstDay.month}/${firstDay.dateNum}〜${lastDay.month}/${lastDay.dateNum} の週間目標`;
+      }
+
+      const datePicker = document.getElementById('week-date-picker');
+      if (datePicker) {
+        const selectedDateObj = weekDates.find(d => d.key === state.selectedTodayKey) || firstDay;
+        datePicker.value = selectedDateObj.ymd;
+      }
+
+      const todaySelector = document.getElementById('today-selector');
+      if (todaySelector) {
+        todaySelector.innerHTML = weekDates.map(d => `
+          <option value="${d.key}" ${d.key === state.selectedTodayKey ? 'selected' : ''}>
+            ${d.shortDate} (${d.label})${d.isRealToday ? ' • 今日' : ''}
+          </option>
+        `).join('');
+      }
+
+      const themeIcon = document.getElementById('theme-icon');
+      if (themeIcon) {
+        themeIcon.setAttribute('data-lucide', state.darkMode ? 'sun' : 'moon');
+      }
+    }
+
+    function renderTopStep1Board() {
+      const container = document.getElementById('top-weekly-goals-grid');
+      if (!container) return;
+
+      const activeHabits = getActiveWeekHabits();
+
+      container.innerHTML = CATEGORY_ORDER.map(catId => {
+        const cat = CATEGORIES[catId];
+        const catHabits = activeHabits.filter(h => h.category === catId);
+
+        const tasksHtml = catHabits.length === 0
+          ? `<div class="text-xs text-slate-400 dark:text-slate-500 py-2 text-center">タスクがありません</div>`
+          : catHabits.map(h => `
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-1">
+                <div class="flex items-center justify-between gap-1.5">
+                  <input
+                    type="text"
+                    value="${escapeHtml(h.name)}"
+                    onchange="updateTaskName('${h.id}', this.value)"
+                    title="クリックしてタスク名を編集"
+                    class="w-full text-sm sm:text-[15px] font-extrabold text-slate-900 dark:text-white bg-transparent border-b border-transparent focus:border-indigo-500 focus:outline-none truncate leading-snug"
+                  />
+                  <button
+                    type="button"
+                    onclick="openEditModal('${h.id}')"
+                    title="詳細・各日の目標を編集"
+                    class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 shrink-0 cursor-pointer"
+                  >
+                    <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value="${escapeHtml(h.weeklyGoal || '')}"
+                  onchange="updateWeeklyGoal('${h.id}', this.value)"
+                  placeholder="今週の目標を入力..."
+                  class="w-full text-xs font-medium px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-950/80 border border-slate-200/70 dark:border-slate-800 ${cat.focusRing} focus:outline-none text-slate-600 dark:text-slate-300"
+                />
+              </div>
+            `).join('');
+
+        return `
+          <div class="rounded-2xl p-2.5 sm:p-3 border ${cat.cardBg} ${cat.cardBorder} flex flex-col justify-between gap-2">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                  <span class="w-6 h-6 rounded-lg ${cat.headerBg} text-white flex items-center justify-center shadow-2xs">
+                    <i data-lucide="${cat.icon}" class="w-3.5 h-3.5"></i>
+                  </span>
+                  <span class="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
+                    ${cat.name}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onclick="openAddModalForCategory('${cat.id}')"
+                  title="${cat.name}のタスクを追加"
+                  class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${cat.badgeBg} ${cat.badgeText} border ${cat.badgeBorder} hover:opacity-85 cursor-pointer"
+                >
+                  <i data-lucide="plus" class="w-3 h-3"></i>
+                  <span>追加</span>
+                </button>
+              </div>
+
+              <div class="space-y-1.5">
+                ${tasksHtml}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderCategoryFilterTabs() {
+      const container = document.getElementById('category-filter-tabs');
+      if (!container) return;
+
+      const activeHabits = getActiveWeekHabits();
+      const allBtnActive = state.selectedCategory === 'all';
+
+      let html = `
+        <button
+          type="button"
+          onclick="selectCategoryFilter('all')"
+          class="px-3 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer ${
+            allBtnActive
+              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xs'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70 dark:bg-slate-800 dark:text-slate-400'
+          }"
+        >
+          すべて (${activeHabits.length})
+        </button>
+      `;
+
+      CATEGORY_ORDER.forEach(catId => {
+        const cat = CATEGORIES[catId];
+        const count = activeHabits.filter(h => h.category === catId).length;
+        const isActive = state.selectedCategory === catId;
+        html += `
+          <button
+            type="button"
+            onclick="selectCategoryFilter('${catId}')"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap border transition-all cursor-pointer ${
+              isActive
+                ? `${cat.headerBg} text-white border-transparent shadow-2xs`
+                : `${cat.badgeBg} ${cat.badgeText} ${cat.badgeBorder} hover:opacity-85`
+            }"
+          >
+            <i data-lucide="${cat.icon}" class="w-3.5 h-3.5"></i>
+            <span>${cat.name} (${count})</span>
+          </button>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function renderStep2MatrixTable() {
+      const headerRow = document.getElementById('matrix-header-row');
+      const tbody = document.getElementById('matrix-tbody');
+      if (!headerRow || !tbody) return;
+
+      const weekDates = getActiveWeekDates();
+      const activeHabits = getActiveWeekHabits();
+      const selectedDayKey = state.selectedTodayKey;
+
+      const filtered = activeHabits.filter(h => {
+        if (state.selectedCategory !== 'all' && h.category !== state.selectedCategory) return false;
+        if (state.onlyUncompletedToday && h.checks && h.checks[selectedDayKey]) return false;
+        if (state.searchQuery.trim()) {
+          const q = state.searchQuery.toLowerCase();
+          const inName = h.name.toLowerCase().includes(q);
+          const inDaily = Object.values(h.dailyGoals || {}).some(val => String(val).toLowerCase().includes(q));
+          if (!inName && !inDaily) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        headerRow.innerHTML = `
+          <th class="py-3 px-4 text-xs font-extrabold text-slate-600 dark:text-slate-300">
+            曜日 ＼ タスク
+          </th>
+        `;
+        tbody.innerHTML = `
+          <tr>
+            <td class="py-12 text-center text-slate-500 dark:text-slate-400">
+              <div class="flex flex-col items-center gap-2">
+                <p class="text-sm font-bold">条件に一致するタスクがありません</p>
+                <button
+                  type="button"
+                  onclick="resetFilters()"
+                  class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                >
+                  フィルターを解除する
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      // 横軸（列ヘッダー）＝ 各タスク（週目標は表示せず、タスク名を大きく目立たせる）
+      headerRow.innerHTML = `
+        <th class="sticky left-0 z-20 bg-slate-100 dark:bg-slate-800 py-3 pl-4 pr-3 text-xs font-extrabold text-slate-600 dark:text-slate-300 w-[115px] min-w-[115px] border-r border-slate-200/80 dark:border-slate-700">
+          曜日 ＼ タスク
+        </th>
+        ${filtered.map(habit => {
+          const cat = CATEGORIES[habit.category] || CATEGORIES.work;
+          const completedDays = DAYS_OF_WEEK.filter(d => habit.checks && habit.checks[d.key]).length;
+          const targetDays = Number(habit.targetDays) || 5;
+
+          return `
+            <th class="py-2.5 px-3 align-top min-w-[180px] max-w-[220px] border-r border-slate-200/70 dark:border-slate-800 border-t-4 ${cat.cardBorder}">
+              <div class="flex flex-col gap-1.5">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${cat.badgeBg} ${cat.badgeText} ${cat.badgeBorder}">
+                    <i data-lucide="${cat.icon}" class="w-3 h-3"></i>
+                    ${cat.name}
+                  </span>
+                  <div class="flex items-center gap-1">
+                    <span class="text-[11px] font-extrabold px-1.5 py-0.5 rounded bg-white/80 dark:bg-slate-900 text-slate-600 dark:text-slate-300">
+                      ${completedDays}/${targetDays}日
+                    </span>
+                    <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100/90 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300/60 dark:border-amber-800" title="1回達成時のランダム獲得EXP幅">
+                      🎲${habit.expMin}〜${habit.expMax}EXP
+                    </span>
+                    ${state.deleteConfirmId === habit.id ? `
+                      <button
+                        type="button"
+                        onclick="confirmDeleteHabit('${habit.id}')"
+                        class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-extrabold hover:bg-rose-500 cursor-pointer"
+                      >
+                        削除
+                      </button>
+                      <button
+                        type="button"
+                        onclick="cancelDeleteHabit()"
+                        class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold cursor-pointer"
+                      >
+                        戻す
+                      </button>
+                    ` : `
+                      <button
+                        type="button"
+                        onclick="openEditModal('${habit.id}')"
+                        title="編集"
+                        class="p-1 rounded text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
+                      >
+                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <button
+                        type="button"
+                        onclick="clearTaskDailyGoals('${habit.id}')"
+                        title="このタスクの月〜日の目標を一括クリア"
+                        class="p-1 rounded text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
+                      >
+                        <i data-lucide="eraser" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <button
+                        type="button"
+                        onclick="requestDeleteHabit('${habit.id}')"
+                        title="削除"
+                        class="p-1 rounded text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
+                      >
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    `}
+                  </div>
+                </div>
+                <div
+                  onclick="openEditModal('${habit.id}')"
+                  title="クリックしてタスクを編集"
+                  class="font-extrabold text-sm sm:text-[15px] text-slate-900 dark:text-white leading-snug cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                >
+                  ${escapeHtml(habit.name)}
+                </div>
+              </div>
+            </th>
+          `;
+        }).join('')}
+      `;
+
+      // 縦軸（行）＝ 月曜日〜日曜日
+      tbody.innerHTML = weekDates.map(d => {
+        const isSelected = d.key === selectedDayKey;
+
+        return `
+          <tr class="group transition-colors ${isSelected ? 'bg-indigo-50/35 dark:bg-indigo-950/20' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/30'}">
+            <!-- 左端固定：曜日・日付セル -->
+            <th
+              onclick="setTodayKey('${d.key}')"
+              title="クリックして選択曜日に設定"
+              class="sticky left-0 z-10 py-3 pl-4 pr-3 text-left align-middle cursor-pointer select-none border-r border-slate-200/80 dark:border-slate-800 ${
+                isSelected
+                  ? 'bg-indigo-50 dark:bg-slate-800'
+                  : 'bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/80'
+              }"
+            >
+              <div class="flex flex-col gap-0.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs sm:text-sm font-extrabold ${
+                    isSelected
+                      ? 'text-indigo-600 dark:text-indigo-400'
+                      : d.key === 'sat'
+                      ? 'text-sky-600 dark:text-sky-400'
+                      : d.key === 'sun'
+                      ? 'text-rose-600 dark:text-rose-400'
+                      : 'text-slate-800 dark:text-slate-100'
+                  }">${d.label}曜日</span>
+                  ${d.isRealToday ? `<span class="text-[10px] font-black px-1.5 py-0.2 rounded bg-amber-500 text-white">今日</span>` : ''}
+                </div>
+                <span class="text-[11px] font-bold ${
+                  isSelected ? 'text-indigo-600 dark:text-indigo-300' : 'text-slate-400 dark:text-slate-500'
+                }">${d.shortDate}</span>
+              </div>
+            </th>
+
+            <!-- 各タスクのその日の達成チェック＆目標入力セル -->
+            ${filtered.map(habit => {
+              const cat = CATEGORIES[habit.category] || CATEGORIES.work;
+              const checked = !!(habit.checks && habit.checks[d.key]);
+              const gainedExpVal = habit.expGains && habit.expGains[d.key] ? habit.expGains[d.key] : null;
+              const dailyText = (habit.dailyGoals && habit.dailyGoals[d.key]) ? habit.dailyGoals[d.key] : '';
+
+              return `
+                <td class="p-2 align-top border-r border-slate-200/60 dark:border-slate-800/80">
+                  <div class="rounded-xl p-2 border transition-all flex flex-col gap-1.5 ${
+                    checked
+                      ? cat.cellDoneBg
+                      : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800'
+                  }">
+                    <button
+                      type="button"
+                      onclick="toggleCheck('${habit.id}', '${d.key}', event)"
+                      class="w-full py-1 px-2 rounded-lg text-[11px] font-extrabold flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95 ${
+                        checked
+                          ? `${cat.checkActive} check-pop shadow-2xs`
+                          : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+                      }"
+                    >
+                      <i data-lucide="${checked ? 'check-circle-2' : 'circle'}" class="w-3.5 h-3.5"></i>
+                      <span>${checked ? `達成済 (+${gainedExpVal || habit.expMin}EXP)` : `未達成 (${habit.expMin}〜${habit.expMax})`}</span>
+                    </button>
+
+                    <textarea
+                      rows="2"
+                      onchange="updateDailyGoal('${habit.id}', '${d.key}', this.value)"
+                      placeholder="${d.label}曜の目標..."
+                      class="daily-goal-input w-full text-[11px] font-bold leading-tight p-1.5 rounded-lg bg-white/90 dark:bg-slate-950/70 border border-slate-200/70 dark:border-slate-800 ${cat.focusRing} focus:outline-none text-slate-800 dark:text-slate-100"
+                    >${escapeHtml(dailyText)}</textarea>
+                  </div>
+                </td>
+              `;
+            }).join('')}
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderBottomRpgSection() {
+      const container = document.getElementById('rpg-bottom-section');
+      if (!container) return;
+
+      const rpg = calculateRpgStats();
+      const heroStat = calculateHeroDetailedStatus(rpg);
+      const heroPixelSvg = getHeroPixelArtSvg(rpg);
+      const displayStage = state.viewingStageId
+        ? (RPG_STAGES.find(s => s.id === state.viewingStageId) || rpg.activeStage)
+        : rpg.activeStage;
+
+      const reqLv = displayStage.reqLevel;
+      const clearedCategoriesCount = CATEGORY_ORDER.filter(catId => rpg.categories[catId].level >= reqLv).length;
+      const questProgressPct = Math.round((clearedCategoriesCount / 4) * 100);
+
+      const slotFilter = state.rpgShop.selectedSlotFilter || 'all';
+      const filteredShopItems = RPG_SHOP_ITEMS.filter(item => slotFilter === 'all' || item.slot === slotFilter);
+
+      container.innerHTML = `
+        <!-- 上段：現在の舞台ヘッダー ＆ ステージ切替マップ -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-indigo-800/60">
+          <div class="flex items-start sm:items-center gap-3.5">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-3xl shrink-0 shadow-inner">
+              ${displayStage.emoji}
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-amber-400 text-slate-950">
+                  現在の舞台
+                </span>
+                <span class="text-xs font-bold text-indigo-300">
+                  (${rpg.currentTitle.emoji} ${rpg.currentTitle.title} • 総合 Lv.${rpg.playerLevel} / 累計 ${rpg.totalExp} EXP)
+                </span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-black bg-yellow-400/20 text-yellow-300 border border-yellow-400/40">
+                  💰 所持ゴールド: ${rpg.currentGold} G
+                </span>
+              </div>
+              <h2 class="text-lg sm:text-2xl font-black text-white mt-1">
+                ${escapeHtml(displayStage.name)}
+              </h2>
+              <p class="text-xs text-indigo-200/90 mt-0.5">
+                ${escapeHtml(displayStage.desc)}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+            ${RPG_STAGES.map((stg, idx) => {
+              const isCurrentActive = stg.id === rpg.activeStage.id;
+              const isViewing = stg.id === displayStage.id;
+              const isCleared = idx < rpg.activeStageIndex;
+              return `
+                <button
+                  type="button"
+                  onclick="selectViewingStage(${stg.id})"
+                  class="px-2.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap border transition-all cursor-pointer flex items-center gap-1 ${
+                    isViewing
+                      ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md scale-[1.03]'
+                      : isCleared
+                      ? 'bg-emerald-950/70 text-emerald-300 border-emerald-700/70 hover:bg-emerald-900/70'
+                      : isCurrentActive
+                      ? 'bg-indigo-800/80 text-white border-indigo-500'
+                      : 'bg-slate-900/70 text-slate-400 border-slate-800 hover:text-slate-200'
+                  }"
+                >
+                  <span>${stg.emoji}</span>
+                  <span>${escapeHtml(stg.shortName)}</span>
+                  ${isCleared ? `<span class="text-[10px]">✅</span>` : ''}
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- 中段：ドット絵の主人公（装備連動） ＆ ステータス・装着中装備ウィンドウ -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <!-- 左側：ドット絵の主人公スプライト＆総合レベル画面 -->
+          <div class="lg:col-span-5 rounded-2xl bg-slate-950/80 border-2 border-indigo-500/40 p-4 flex flex-col sm:flex-row items-center gap-4 relative overflow-hidden shadow-inner">
+            <!-- レトロ風ドット背景ステージ -->
+            <div class="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-gradient-to-b from-indigo-950 via-slate-900 to-emerald-950 border border-indigo-400/40 flex flex-col items-center justify-center shrink-0 overflow-hidden shadow-lg">
+              <div class="absolute top-2 left-2.5 text-[10px] opacity-60">✨</div>
+              <div class="absolute top-3 right-3 text-[10px] opacity-60">⭐</div>
+              <div class="z-10 mt-1">
+                ${heroPixelSvg}
+              </div>
+              <!-- ドット芝生・地面 -->
+              <div class="w-full h-3 bg-emerald-600/80 border-t-2 border-emerald-400 mt-auto"></div>
+            </div>
+
+            <!-- 主人公プロフィール＆HP/MP/EXPゲージ -->
+            <div class="flex-1 w-full space-y-2.5">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
+                    ${rpg.currentTitle.emoji} ${rpg.currentTitle.title}
+                  </span>
+                  <div class="text-base sm:text-lg font-black text-white mt-0.5 flex items-center gap-2">
+                    <span>主人公 (HERO)</span>
+                    <span class="text-amber-300">Lv.${rpg.playerLevel}</span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] font-bold text-slate-400">総合戦闘力</div>
+                  <div class="text-sm font-black text-amber-400">${heroStat.combatPower}</div>
+                </div>
+              </div>
+
+              <!-- HP / MP バー -->
+              <div class="grid grid-cols-2 gap-2">
+                <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                  <div class="flex items-center justify-between text-[10px] font-black mb-1">
+                    <span class="text-emerald-400">HP (生命力)</span>
+                    <span class="text-white">${heroStat.hp}</span>
+                  </div>
+                  <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 w-full"></div>
+                  </div>
+                </div>
+                <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                  <div class="flex items-center justify-between text-[10px] font-black mb-1">
+                    <span class="text-purple-400">MP (知恵力)</span>
+                    <span class="text-white">${heroStat.mp}</span>
+                  </div>
+                  <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-purple-500 to-indigo-400 w-full"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 次の総合レベルまでのEXPバー -->
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-[11px] font-bold text-indigo-200">
+                  <span>NEXT LEVEL EXP</span>
+                  <span>${rpg.playerLevelExp} / ${EXP_PER_PLAYER_LEVEL} EXP (${rpg.playerNextPct}%)</span>
+                </div>
+                <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-amber-400 to-yellow-300 rounded-full transition-all duration-500" style="width: ${rpg.playerNextPct}%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右側：RPGパラメーター（攻撃・防御・知力・素早さ）＆ 現在装着中の装備品 -->
+          <div class="lg:col-span-7 rounded-2xl bg-slate-950/80 border-2 border-indigo-500/40 p-4 flex flex-col justify-between gap-3 shadow-inner">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+              <span class="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
+                <span>🛡️</span>
+                <span>主人公の能力パラメーター ＆ 装着中の装備（ドット絵連動）</span>
+              </span>
+              <span class="text-[11px] font-extrabold text-yellow-300">
+                💰 所持ゴールド: ${rpg.currentGold} G
+              </span>
+            </div>
+
+            <!-- 4つのバトルパラメーター -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div class="p-2.5 rounded-xl bg-slate-900/90 border border-blue-500/30">
+                <div class="text-[10px] font-bold text-blue-300">⚔️ 攻撃力 (ATK)</div>
+                <div class="text-lg font-black text-white mt-0.5">${heroStat.atk}</div>
+                <div class="text-[10px] text-slate-400">仕事Lv.${rpg.categories.work.level} + 装備</div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-900/90 border border-amber-500/30">
+                <div class="text-[10px] font-bold text-amber-300">🛡️ 防御力 (DEF)</div>
+                <div class="text-lg font-black text-white mt-0.5">${heroStat.def}</div>
+                <div class="text-[10px] text-slate-400">家事Lv.${rpg.categories.housework.level} + 装備</div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-900/90 border border-purple-500/30">
+                <div class="text-[10px] font-bold text-purple-300">🔮 魔力 (INT)</div>
+                <div class="text-lg font-black text-white mt-0.5">${heroStat.mag}</div>
+                <div class="text-[10px] text-slate-400">自己研鑽Lv.${rpg.categories.study.level} + 装備</div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/30">
+                <div class="text-[10px] font-bold text-emerald-300">⚡ 敏捷性 (SPD)</div>
+                <div class="text-lg font-black text-white mt-0.5">${heroStat.spd}</div>
+                <div class="text-[10px] text-slate-400">健康Lv.${rpg.categories.health.level} + 装備</div>
+              </div>
+            </div>
+
+            <!-- 現在装着中の装備スロット（4部位） -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+              <div class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-indigo-500/40 flex items-center gap-2">
+                <span class="text-sm">${heroStat.weaponItem.emoji}</span>
+                <div class="min-w-0">
+                  <div class="text-[9px] text-slate-400 font-bold">武器</div>
+                  <div class="text-[11px] font-extrabold text-amber-200 truncate">${escapeHtml(heroStat.weaponItem.name)}</div>
+                </div>
+              </div>
+              <div class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-indigo-500/40 flex items-center gap-2">
+                <span class="text-sm">${heroStat.shieldItem.emoji}</span>
+                <div class="min-w-0">
+                  <div class="text-[9px] text-slate-400 font-bold">盾</div>
+                  <div class="text-[11px] font-extrabold text-blue-200 truncate">${escapeHtml(heroStat.shieldItem.name)}</div>
+                </div>
+              </div>
+              <div class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-indigo-500/40 flex items-center gap-2">
+                <span class="text-sm">${heroStat.armorItem.emoji}</span>
+                <div class="min-w-0">
+                  <div class="text-[9px] text-slate-400 font-bold">鎧・服</div>
+                  <div class="text-[11px] font-extrabold text-emerald-200 truncate">${escapeHtml(heroStat.armorItem.name)}</div>
+                </div>
+              </div>
+              <div class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-indigo-500/40 flex items-center gap-2">
+                <span class="text-sm">${heroStat.helmItem.emoji}</span>
+                <div class="min-w-0">
+                  <div class="text-[9px] text-slate-400 font-bold">頭装備</div>
+                  <div class="text-[11px] font-extrabold text-purple-200 truncate">${escapeHtml(heroStat.helmItem.name)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 舞台クエスト ＆ 4カテゴリー別レベルゲージ -->
+        <div class="rounded-2xl bg-slate-950/65 border border-indigo-800/70 p-4 sm:p-5 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-extrabold">
+                ⚔️ 舞台クエスト
+              </span>
+              <h3 class="text-sm sm:text-base font-extrabold text-white">
+                ${escapeHtml(displayStage.questTitle)}
+              </h3>
+            </div>
+            <span class="text-xs font-extrabold ${clearedCategoriesCount === 4 ? 'text-emerald-400' : 'text-amber-300'}">
+              クエスト達成度: ${clearedCategoriesCount} / 4 カテゴリー (${questProgressPct}%)
+            </span>
+          </div>
+
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div
+              class="h-full bg-gradient-to-r from-amber-400 via-emerald-400 to-cyan-400 rounded-full transition-all duration-500"
+              style="width: ${questProgressPct}%"
+            ></div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 pt-1">
+            ${CATEGORY_ORDER.map(catId => {
+              const cat = CATEGORIES[catId];
+              const meta = RPG_CATEGORY_META[catId];
+              const stat = rpg.categories[catId];
+              const isQuestMet = stat.level >= reqLv;
+              const neededExpForQuest = isQuestMet
+                ? 0
+                : Math.max(0, (reqLv - 1) * EXP_PER_CAT_LEVEL - stat.exp);
+
+              return `
+                <div class="rounded-2xl p-3.5 bg-slate-900/90 border ${
+                  isQuestMet ? 'border-emerald-500/70' : 'border-slate-800'
+                } flex flex-col justify-between gap-2.5">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="px-2 py-0.5 rounded-md text-[10px] font-black border ${meta.badgeBg}">
+                        ${meta.statCode} • ${meta.statName}
+                      </span>
+                      <span class="font-extrabold text-sm text-white">${cat.name}</span>
+                    </div>
+                    <span class="text-base font-black text-amber-300">
+                      Lv.${stat.level}
+                    </span>
+                  </div>
+
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between text-[11px] text-slate-300">
+                      <span>EXP: ${stat.currentLevelExp} / ${stat.expForNext}</span>
+                      <span>次Lvまであと${stat.remainExpForNext}EXP</span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <div class="h-full ${meta.barBg} rounded-full transition-all duration-500" style="width: ${stat.nextLevelPct}%"></div>
+                    </div>
+                  </div>
+
+                  <div class="pt-1 border-t border-slate-800/90 flex items-center justify-between text-[11px] font-extrabold">
+                    <span class="text-slate-400">目標: Lv.${reqLv}</span>
+                    ${isQuestMet
+                      ? `<span class="text-emerald-400 flex items-center gap-1">✅ クエスト達成！</span>`
+                      : `<span class="text-amber-300">あと ${neededExpForQuest} EXPでクリア</span>`
+                    }
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- 一番下：🛍️ 装備ショップ（開閉対応ウィンドウ） -->
+        <div class="rounded-2xl bg-slate-950/80 border border-amber-500/40 overflow-hidden transition-all">
+          <!-- ショップヘッダーバー（クリックで開閉可能） -->
+          <div
+            onclick="toggleRpgShopOpen()"
+            class="p-4 sm:px-5 flex flex-wrap items-center justify-between gap-3 cursor-pointer hover:bg-slate-900/70 transition-colors select-none"
+          >
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <span class="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 text-xs font-black">
+                🛍️ 冒険者ギルドの装備ショップ
+              </span>
+              <span class="text-xs font-bold text-indigo-200">
+                所持ゴールド（<span class="text-yellow-300 font-black">${rpg.currentGold} G</span>）で武器・盾・鎧・頭装備を購入＆着せ替え
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onclick="event.stopPropagation(); toggleRpgShopOpen();"
+              class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition cursor-pointer ${
+                state.rpgShop.isOpen
+                  ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700'
+                  : 'bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-sm'
+              }"
+            >
+              <span>${state.rpgShop.isOpen ? '✕ ショップを閉じる' : '🛍️ ショップを開く'}</span>
+              <i data-lucide="${state.rpgShop.isOpen ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          ${state.rpgShop.isOpen ? `
+            <!-- ショップ中身（開いている時のみ表示） -->
+            <div class="px-4 pb-4 sm:px-5 sm:pb-5 pt-3 border-t border-slate-800/90 space-y-3.5 animate-fadeIn">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <span class="text-[11px] text-slate-300">
+                  💡 購入した装備に着せ替えると、上のドット絵の主人公の見た目とステータスがリアルタイムに変化します！
+                </span>
+                <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                  ${[
+                    { key: 'all', label: 'すべて' },
+                    { key: 'weapon', label: '🗡️ 武器' },
+                    { key: 'shield', label: '🛡️ 盾' },
+                    { key: 'armor', label: '🎽 鎧・服' },
+                    { key: 'helm', label: '👑 頭装備' }
+                  ].map(tab => `
+                    <button
+                      type="button"
+                      onclick="setShopSlotFilter('${tab.key}')"
+                      class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold whitespace-nowrap cursor-pointer transition ${
+                        slotFilter === tab.key
+                          ? 'bg-amber-400 text-slate-950 shadow'
+                          : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
+                      }"
+                    >
+                      ${tab.label}
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto pr-1">
+                ${filteredShopItems.map(item => {
+                  const isOwned = state.rpgShop.ownedItems.includes(item.id);
+                  const isEquipped = state.rpgShop.equipped[item.slot] === item.id;
+                  const canAfford = rpg.currentGold >= item.price;
+
+                  return `
+                    <div class="rounded-xl p-3 bg-slate-900/95 border transition flex flex-col justify-between gap-2 ${
+                      isEquipped
+                        ? 'border-amber-400 ring-1 ring-amber-400/50 bg-indigo-950/60'
+                        : isOwned
+                        ? 'border-emerald-600/50'
+                        : 'border-slate-800'
+                    }">
+                      <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-base shrink-0">
+                            ${item.emoji}
+                          </span>
+                          <div class="min-w-0">
+                            <div class="flex items-center gap-1">
+                              <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">${item.slotLabel}</span>
+                              ${isEquipped ? `<span class="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-400 text-slate-950">装着中</span>` : ''}
+                            </div>
+                            <div class="text-xs font-extrabold text-white truncate mt-0.5">${escapeHtml(item.name)}</div>
+                            <div class="text-[10px] font-bold text-emerald-400">${escapeHtml(item.bonusStat)}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onclick="buyOrEquipShopItem('${item.id}')"
+                        class="w-full py-1.5 px-2.5 rounded-lg text-[11px] font-extrabold transition cursor-pointer flex items-center justify-center gap-1 ${
+                          isEquipped
+                            ? 'bg-slate-800 text-amber-300 border border-amber-500/40 cursor-default'
+                            : isOwned
+                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-2xs'
+                            : canAfford
+                            ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-2xs'
+                            : 'bg-slate-800 text-slate-500 border border-slate-700'
+                        }"
+                      >
+                        ${isEquipped
+                          ? '✨ 現在装備中'
+                          : isOwned
+                          ? '🔄 この装備に着せ替える'
+                          : `💰 ${item.price} G で購入する`
+                        }
+                      </button>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function renderModalCategorySelector() {
+      const container = document.getElementById('modal-category-selector');
+      if (!container) return;
+      container.innerHTML = CATEGORY_ORDER.map(catId => {
+        const cat = CATEGORIES[catId];
+        const selected = state.modalSelectedCategory === catId;
+        return `
+          <button
+            type="button"
+            onclick="setModalCategory('${catId}')"
+            class="p-2.5 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              selected
+                ? `${cat.headerBg} text-white border-transparent shadow-sm`
+                : `${cat.badgeBg} ${cat.badgeText} ${cat.badgeBorder} opacity-80 hover:opacity-100`
+            }"
+          >
+            <i data-lucide="${cat.icon}" class="w-4 h-4"></i>
+            <span>${cat.name}</span>
+          </button>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function renderAll() {
+      ensureWeekRecordExists(getActiveWeekKey());
+      renderHeaderControls();
+      renderTopStep1Board();
+      renderCategoryFilterTabs();
+      renderRecordViewModeVisibility();
+      renderMobileDailyCards();
+      renderStep2MatrixTable();
+      renderBottomRpgSection();
+      lucide.createIcons();
+    }
+
+    function renderRecordViewModeVisibility() {
+      const cardsContainer = document.getElementById('mobile-daily-cards-container');
+      const tableContainer = document.getElementById('pc-matrix-table-container');
+      const btnCards = document.getElementById('btn-view-mobile-cards');
+      const btnTable = document.getElementById('btn-view-pc-table');
+      if (!cardsContainer || !tableContainer || !btnCards || !btnTable) return;
+
+      if (state.recordViewMode === 'cards') {
+        cardsContainer.classList.remove('hidden');
+        tableContainer.classList.add('hidden');
+        btnCards.className = 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs';
+        btnTable.className = 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white';
+      } else {
+        cardsContainer.classList.add('hidden');
+        tableContainer.classList.remove('hidden');
+        btnTable.className = 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs';
+        btnCards.className = 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white';
+      }
+    }
+
+    function renderMobileDailyCards() {
+      const pillsEl = document.getElementById('mobile-day-pills');
+      const bannerEl = document.getElementById('mobile-selected-day-banner');
+      const listEl = document.getElementById('mobile-daily-cards-list');
+      if (!pillsEl || !bannerEl || !listEl) return;
+
+      const weekDates = getActiveWeekDates();
+      const activeHabits = getActiveWeekHabits();
+      const selectedDayKey = state.selectedTodayKey;
+      const selectedDayObj = weekDates.find(d => d.key === selectedDayKey) || weekDates[0];
+
+      pillsEl.innerHTML = weekDates.map(d => {
+        const isSelected = d.key === selectedDayKey;
+        const doneCount = activeHabits.filter(h => h.checks && h.checks[d.key]).length;
+        const totalCount = activeHabits.length;
+        const allDone = totalCount > 0 && doneCount === totalCount;
+
+        return `
+          <button
+            type="button"
+            onclick="setTodayKey('${d.key}')"
+            class="py-2 px-1 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+              isSelected
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md scale-[1.03]'
+                : allDone
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                : 'bg-slate-50 dark:bg-slate-800/70 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-700'
+            }"
+          >
+            <span class="text-[11px] font-extrabold">${d.label}${d.isRealToday ? '•今' : ''}</span>
+            <span class="text-[10px] font-bold opacity-90">${d.shortDate}</span>
+            <span class="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ${
+              isSelected ? 'bg-white/20 text-white' : 'bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+            }">${doneCount}/${totalCount}</span>
+          </button>
+        `;
+      }).join('');
+
+      const dayDoneCount = activeHabits.filter(h => h.checks && h.checks[selectedDayKey]).length;
+      bannerEl.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-1 rounded-xl bg-indigo-600 text-white text-xs font-extrabold">
+            ${selectedDayObj.shortDate} (${selectedDayObj.fullLabel})
+          </span>
+          <span class="text-xs font-extrabold text-slate-700 dark:text-slate-200">
+            達成: ${dayDoneCount} / ${activeHabits.length} タスク
+          </span>
+        </div>
+        <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-300">
+          🎲 タスクごとのランダムEXP ＆ ゴールド獲得
+        </span>
+      `;
+
+      const filtered = activeHabits.filter(h => {
+        if (state.selectedCategory !== 'all' && h.category !== state.selectedCategory) return false;
+        if (state.onlyUncompletedToday && h.checks[selectedDayKey]) return false;
+        if (state.searchQuery.trim()) {
+          const q = state.searchQuery.toLowerCase();
+          const inName = h.name.toLowerCase().includes(q);
+          const inWeekly = (h.weeklyGoal || '').toLowerCase().includes(q);
+          const inDaily = Object.values(h.dailyGoals || {}).some(val => String(val).toLowerCase().includes(q));
+          if (!inName && !inWeekly && !inDaily) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="col-span-full py-10 text-center text-slate-500 dark:text-slate-400">
+            <p class="text-sm font-bold">表示するタスクがありません</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(habit => {
+        const cat = CATEGORIES[habit.category] || CATEGORIES.work;
+        const checked = !!(habit.checks && habit.checks[selectedDayKey]);
+        const gainedExpVal = habit.expGains && habit.expGains[selectedDayKey] ? habit.expGains[selectedDayKey] : null;
+        const dailyGoalText = (habit.dailyGoals && habit.dailyGoals[selectedDayKey]) ? habit.dailyGoals[selectedDayKey] : '';
+        const completedDays = DAYS_OF_WEEK.filter(d => habit.checks && habit.checks[d.key]).length;
+        const targetDays = Number(habit.targetDays) || 7;
+
+        return `
+          <div class="rounded-2xl p-4 border transition-all flex flex-col justify-between gap-3 ${
+            checked ? cat.cellDoneBg : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xs'
+          }">
+            <div class="flex items-start justify-between gap-2">
+              <div class="space-y-1 min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${cat.badgeBg} ${cat.badgeText} ${cat.badgeBorder}">
+                    ${cat.name}
+                  </span>
+                  <span class="text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
+                    週間達成: ${completedDays}/${targetDays}日
+                  </span>
+                  <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300">
+                    🎲 ${habit.expMin}〜${habit.expMax} EXP
+                  </span>
+                </div>
+                <div class="font-extrabold text-base text-slate-900 dark:text-slate-100 leading-snug">
+                  ${escapeHtml(habit.name)}
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onclick="clearTaskDailyGoals('${habit.id}')"
+                  title="このタスクの月〜日の目標を一括クリア"
+                  class="p-1.5 rounded-xl text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <i data-lucide="eraser" class="w-4 h-4"></i>
+                </button>
+                <button
+                  type="button"
+                  onclick="openEditModal('${habit.id}')"
+                  title="編集"
+                  class="p-1.5 rounded-xl text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <i data-lucide="edit-3" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-2 pt-1">
+              <div>
+                <label class="block text-[11px] font-extrabold text-slate-600 dark:text-slate-300 mb-1">
+                  📌 ${selectedDayObj.shortDate}(${selectedDayObj.label}) の達成目標:
+                </label>
+                <textarea
+                  rows="2"
+                  onchange="updateDailyGoal('${habit.id}', '${selectedDayKey}', this.value)"
+                  placeholder="${selectedDayObj.shortDate}(${selectedDayObj.label})の目標を入力..."
+                  class="daily-goal-input w-full text-xs font-bold leading-snug p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 ${cat.focusRing} focus:outline-none text-slate-800 dark:text-slate-100"
+                >${escapeHtml(dailyGoalText)}</textarea>
+              </div>
+
+              <button
+                type="button"
+                onclick="toggleCheck('${habit.id}', '${selectedDayKey}', event)"
+                class="w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 ${
+                  checked
+                    ? `${cat.checkActive} check-pop shadow-sm`
+                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
+                }"
+              >
+                <i data-lucide="${checked ? 'check-circle-2' : 'circle'}" class="w-4 h-4"></i>
+                <span>${checked ? `達成済み！ (+${gainedExpVal || habit.expMin} EXP 獲得済)` : `この日の目標を「達成」にする (🎲 ${habit.expMin}〜${habit.expMax} EXP)`}</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderModalDailyInputs(dailyGoalsObj = {}) {
+      const weekDates = getActiveWeekDates();
+      const container = document.getElementById('modal-daily-goals-inputs');
+      container.innerHTML = weekDates.map(d => `
+        <div class="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
+          <label class="block text-[11px] font-extrabold text-slate-600 dark:text-slate-300 mb-1">
+            ${d.label}曜日 (${d.shortDate}) の目標
+          </label>
+          <input
+            type="text"
+            id="modal-daily-${d.key}"
+            value="${escapeHtml(dailyGoalsObj[d.key] || '')}"
+            placeholder="例: 30分演習 / 掃除..."
+            class="w-full px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:outline-none text-slate-900 dark:text-white"
+          />
+        </div>
+      `).join('');
+    }
+
+    window.setModalCategory = function(catId) {
+      state.modalSelectedCategory = catId;
+      renderModalCategorySelector();
+    };
+
+    window.openAddModalForCategory = function(catId) {
+      state.modalSelectedCategory = catId || 'work';
+      openAddModal();
+    };
+
+    function openAddModal() {
+      document.getElementById('modal-title').textContent = '新しいタスクと①週間トータル目標・②各日目標を追加';
+      document.getElementById('form-habit-id').value = '';
+      document.getElementById('form-name').value = '';
+      document.getElementById('form-weekly-goal').value = '';
+      document.getElementById('form-target-days').value = '5';
+      document.getElementById('form-exp-min').value = '15';
+      document.getElementById('form-exp-max').value = '30';
+      document.getElementById('quick-fill-text').value = '';
+      renderModalCategorySelector();
+      renderModalDailyInputs({});
+
+      const modal = document.getElementById('habit-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    window.openEditModal = function(habitId) {
+      const activeHabits = getActiveWeekHabits();
+      const habit = activeHabits.find(h => h.id === habitId);
+      if (!habit) return;
+
+      document.getElementById('modal-title').textContent = 'タスクと①週間トータル目標・②各日目標を一括編集';
+      document.getElementById('form-habit-id').value = habit.id;
+      document.getElementById('form-name').value = habit.name;
+      document.getElementById('form-weekly-goal').value = habit.weeklyGoal || '';
+      document.getElementById('form-target-days').value = String(habit.targetDays || 5);
+      document.getElementById('form-exp-min').value = String(habit.expMin || 15);
+      document.getElementById('form-exp-max').value = String(habit.expMax || 30);
+      document.getElementById('quick-fill-text').value = '';
+      state.modalSelectedCategory = habit.category;
+      renderModalCategorySelector();
+      renderModalDailyInputs(habit.dailyGoals || {});
+
+      const modal = document.getElementById('habit-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    };
+
+    function closeModal() {
+      const modal = document.getElementById('habit-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    window.openSyncModal = function() {
+      const modal = document.getElementById('sync-modal');
+      const roomInput = document.getElementById('sync-room-key-input');
+      if (roomInput) roomInput.value = state.syncRoomKey || 'default-habit-board';
+      updateSyncStatusUI();
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      lucide.createIcons();
+    };
+
+    window.closeSyncModal = function() {
+      const modal = document.getElementById('sync-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    };
+
+    function updateSyncStatusUI() {
+      const dot = document.getElementById('sync-status-dot');
+      const text = document.getElementById('sync-status-text');
+      const modalBadge = document.getElementById('modal-cloud-badge');
+
+      if (state.cloudConnected) {
+        if (dot) dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse';
+        if (text) text.textContent = `クラウド同期中 (${state.syncRoomKey})`;
+        if (modalBadge) {
+          modalBadge.textContent = '● クラウドリアルタイム同期ON';
+          modalBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700';
+        }
+      } else {
+        if (dot) dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500';
+        if (text) text.textContent = '自動保存 (同期・保存)';
+        if (modalBadge) {
+          modalBadge.textContent = 'ブラウザ自動保存 + 引き継ぎコード対応';
+          modalBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
+        }
+      }
+    }
+
+    window.applySyncRoomKey = function() {
+      const input = document.getElementById('sync-room-key-input');
+      if (!input) return;
+      const cleaned = input.value.trim().replace(/[^a-zA-Z0-9_-]/g, '');
+      if (cleaned.length < 4) {
+        showToast('合言葉（同期キー）は半角英数字4文字以上で入力してください');
+        return;
+      }
+      state.syncRoomKey = cleaned;
+      localStorage.setItem('habitflow_v4_sync_room_key', cleaned);
+      if (typeof window.reconnectCloudRoom === 'function') {
+        window.reconnectCloudRoom();
+      }
+      updateSyncStatusUI();
+      showToast(`🔑 同期キー「${cleaned}」を設定しました！`);
+    };
+
+    window.copySyncCodeToClipboard = function() {
+      const payload = JSON.stringify({
+        tasks: state.tasks,
+        weeklyRecords: state.weeklyRecords
+      });
+      const encoded = btoa(unescape(encodeURIComponent(payload)));
+      const tempInput = document.createElement('textarea');
+      tempInput.value = encoded;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      showToast('📋 引き継ぎデータコードをコピーしました！スマホやPCで貼り付けて復元できます');
+    };
+
+    window.restoreFromSyncCodeInput = function() {
+      const input = document.getElementById('import-sync-code-input');
+      if (!input || !input.value.trim()) {
+        showToast('引き継ぎコードを貼り付けてください');
+        return;
+      }
+      try {
+        const decoded = decodeURIComponent(escape(atob(input.value.trim())));
+        const parsed = JSON.parse(decoded);
+        if (parsed && Array.isArray(parsed.tasks) && parsed.tasks.length > 0) {
+          state.tasks = parsed.tasks;
+          state.weeklyRecords = parsed.weeklyRecords || {};
+          saveState();
+          renderAll();
+          input.value = '';
+          closeSyncModal();
+          showToast('🎉 引き継ぎコードからデータを復元しました！');
+        } else {
+          showToast('コードの形式が正しくありません');
+        }
+      } catch (e) {
+        showToast('コードの復元に失敗しました。正しくコピーされているか確認してください');
+      }
+    };
+
+    window.exportJsonBackup = function() {
+      const dataStr = JSON.stringify({
+        tasks: state.tasks,
+        weeklyRecords: state.weeklyRecords
+      }, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `habit-board-backup-${getActiveWeekKey()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('💾 バックアップファイルを保存しました');
+    };
+
+    window.importJsonBackupFile = function(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed && Array.isArray(parsed.tasks)) {
+            state.tasks = parsed.tasks;
+            state.weeklyRecords = parsed.weeklyRecords || {};
+            saveState();
+            renderAll();
+            closeSyncModal();
+            showToast('🎉 ファイルからデータを復元しました！');
+          }
+        } catch (err) {
+          showToast('ファイルの読み込みに失敗しました');
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      updateSyncStatusUI();
+      renderAll();
+
+      document.getElementById('btn-prev-week').addEventListener('click', () => {
+        changeWeekByOffset(state.weekOffset - 1);
+      });
+
+      document.getElementById('btn-next-week').addEventListener('click', () => {
+        changeWeekByOffset(state.weekOffset + 1);
+      });
+
+      document.getElementById('btn-jump-current-week').addEventListener('click', () => {
+        changeWeekByOffset(0);
+        showToast('今週のボードに戻りました');
+      });
+
+      document.getElementById('week-date-picker').addEventListener('change', (e) => {
+        if (!e.target.value) return;
+        const pickedDate = parseDateYMD(e.target.value);
+        const pickedMonday = getMondayOfDate(pickedDate);
+        const diffMs = pickedMonday.getTime() - currentWeekMondayDate.getTime();
+        const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+        changeWeekByOffset(diffWeeks);
+
+        const day = pickedDate.getDay();
+        const idx = day === 0 ? 6 : day - 1;
+        state.selectedTodayKey = DAYS_OF_WEEK[idx].key;
+        renderAll();
+      });
+
+      document.getElementById('btn-copy-prev-week').addEventListener('click', copyGoalsFromPreviousWeek);
+      document.getElementById('btn-clear-week-checks').addEventListener('click', clearCurrentWeekChecks);
+
+      document.getElementById('today-selector').addEventListener('change', (e) => {
+        state.selectedTodayKey = e.target.value;
+        renderAll();
+      });
+
+      document.getElementById('btn-theme').addEventListener('click', () => {
+        state.darkMode = !state.darkMode;
+        document.documentElement.classList.toggle('dark', state.darkMode);
+        localStorage.setItem('habitflow_v3_theme', state.darkMode ? 'dark' : 'light');
+        renderAll();
+      });
+
+      document.getElementById('btn-reset').addEventListener('click', () => {
+        state.weekOffset = 0;
+        setupInitialSampleData();
+        state.selectedCategory = 'all';
+        state.onlyUncompletedToday = false;
+        state.searchQuery = '';
+        saveState();
+        renderAll();
+        showToast('サンプルデータを初期状態に復元しました');
+      });
+
+      document.getElementById('btn-check-all-today').addEventListener('click', () => {
+        const weekKey = getActiveWeekKey();
+        ensureWeekRecordExists(weekKey);
+        const weekData = state.weeklyRecords[weekKey];
+        state.tasks.forEach(t => {
+          if (weekData[t.id]) {
+            weekData[t.id].checks[state.selectedTodayKey] = true;
+          }
+        });
+        saveState();
+        renderAll();
+        const weekDates = getActiveWeekDates();
+        const dayObj = weekDates.find(d => d.key === state.selectedTodayKey);
+        showToast(`🔥 ${dayObj.shortDate}(${dayObj.label})のすべての目標を達成済みにしました！`);
+      });
+
+      document.getElementById('filter-uncompleted-today').addEventListener('change', (e) => {
+        state.onlyUncompletedToday = e.target.checked;
+        renderStep2MatrixTable();
+        lucide.createIcons();
+      });
+
+      document.getElementById('search-input').addEventListener('input', (e) => {
+        state.searchQuery = e.target.value;
+        renderStep2MatrixTable();
+        lucide.createIcons();
+      });
+
+      document.getElementById('btn-fill-weekdays').addEventListener('click', () => {
+        const text = document.getElementById('quick-fill-text').value.trim();
+        if (!text) return;
+        ['mon', 'tue', 'wed', 'thu', 'fri'].forEach(k => {
+          const el = document.getElementById(`modal-daily-${k}`);
+          if (el) el.value = text;
+        });
+      });
+
+      document.getElementById('btn-fill-alldays').addEventListener('click', () => {
+        const text = document.getElementById('quick-fill-text').value.trim();
+        if (!text) return;
+        DAYS_OF_WEEK.forEach(d => {
+          const el = document.getElementById(`modal-daily-${d.key}`);
+          if (el) el.value = text;
+        });
+      });
+
+      document.getElementById('btn-clear-modal-daily').addEventListener('click', () => {
+        DAYS_OF_WEEK.forEach(d => {
+          const el = document.getElementById(`modal-daily-${d.key}`);
+          if (el) el.value = '';
+        });
+        document.getElementById('quick-fill-text').value = '';
+        showToast('🧹 モーダル内の各日（月〜日）の目標欄をクリアしました');
+      });
+
+      document.getElementById('btn-add-habit').addEventListener('click', () => {
+        state.modalSelectedCategory = state.selectedCategory !== 'all' ? state.selectedCategory : 'work';
+        openAddModal();
+      });
+      document.getElementById('btn-close-modal').addEventListener('click', closeModal);
+      document.getElementById('btn-cancel-modal').addEventListener('click', closeModal);
+
+      document.getElementById('habit-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('form-habit-id').value;
+        const name = document.getElementById('form-name').value.trim();
+        const weeklyGoal = document.getElementById('form-weekly-goal').value.trim();
+        const targetDays = Number(document.getElementById('form-target-days').value) || 5;
+        const rawMin = Number(document.getElementById('form-exp-min').value) || 15;
+        const rawMax = Number(document.getElementById('form-exp-max').value) || 30;
+        const expMin = Math.max(1, Math.min(rawMin, rawMax));
+        const expMax = Math.max(expMin, Math.max(rawMin, rawMax));
+
+        if (!name || !weeklyGoal) return;
+
+        const dailyGoals = {};
+        DAYS_OF_WEEK.forEach(d => {
+          const el = document.getElementById(`modal-daily-${d.key}`);
+          dailyGoals[d.key] = el && el.value.trim() ? el.value.trim() : '';
+        });
+
+        const weekKey = getActiveWeekKey();
+        ensureWeekRecordExists(weekKey);
+
+        if (id) {
+          state.tasks = state.tasks.map(t =>
+            t.id === id
+              ? { ...t, name, category: state.modalSelectedCategory, targetDays, expMin, expMax, defaultWeeklyGoal: weeklyGoal, defaultDailyGoals: { ...dailyGoals } }
+              : t
+          );
+          state.weeklyRecords[weekKey][id] = {
+            ...state.weeklyRecords[weekKey][id],
+            weeklyGoal,
+            dailyGoals: { ...dailyGoals }
+          };
+          showToast(`「${name}」の目標とEXP幅（${expMin}〜${expMax} EXP）を更新しました`);
+        } else {
+          const newId = 'task-' + Date.now();
+          state.tasks.unshift({
+            id: newId,
+            category: state.modalSelectedCategory,
+            name,
+            targetDays,
+            expMin,
+            expMax,
+            defaultWeeklyGoal: weeklyGoal,
+            defaultDailyGoals: { ...dailyGoals }
+          });
+          state.weeklyRecords[weekKey][newId] = {
+            weeklyGoal,
+            dailyGoals: { ...dailyGoals },
+            checks: { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false },
+            expGains: {}
+          };
+          showToast(`🌱 新しいタスク「${name}」（🎲${expMin}〜${expMax} EXP）を追加しました！`);
+        }
+
+        saveState();
+        closeModal();
+        renderAll();
+      });
+    });
+  </script>
+
+  <!-- Firebase クラウドリアルタイム同期モジュール（PC ⇄ スマホ自動同期対応） -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    let db = null;
+    let auth = null;
+    let currentUnsubscribe = null;
+    let isApplyingRemote = false;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+    async function initCloudSync() {
+      if (typeof __firebase_config === 'undefined' || !__firebase_config) return;
+      try {
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        subscribeRoomDocument();
+      } catch (err) {
+        console.warn('Cloud sync fallback to local:', err);
+      }
+    }
+
+    function subscribeRoomDocument() {
+      if (!db || !auth || !auth.currentUser) return;
+      if (currentUnsubscribe) currentUnsubscribe();
+
+      const roomKey = state.syncRoomKey || 'default-habit-board';
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'habitBoards', roomKey);
+
+      currentUnsubscribe = onSnapshot(
+        docRef,
+        (snap) => {
+          state.cloudConnected = true;
+          updateSyncStatusUI();
+          if (snap.exists()) {
+            const data = snap.data();
+            if (data && data.payloadJson) {
+              try {
+                const parsed = JSON.parse(data.payloadJson);
+                if (parsed && Array.isArray(parsed.tasks) && parsed.tasks.length > 0) {
+                  isApplyingRemote = true;
+                  state.tasks = parsed.tasks;
+                  state.weeklyRecords = parsed.weeklyRecords || {};
+                  localStorage.setItem('habitflow_v4_multiweek_data', JSON.stringify({
+                    tasks: state.tasks,
+                    weeklyRecords: state.weeklyRecords
+                  }));
+                  renderAll();
+                  isApplyingRemote = false;
+                }
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          } else {
+            window.pushStateToCloud();
+          }
+        },
+        (err) => {
+          console.warn('Firestore snapshot error:', err);
+          state.cloudConnected = false;
+          updateSyncStatusUI();
+        }
+      );
+    }
+
+    window.pushStateToCloud = async function() {
+      if (!db || !auth || !auth.currentUser || isApplyingRemote) return;
+      try {
+        const roomKey = state.syncRoomKey || 'default-habit-board';
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'habitBoards', roomKey);
+        const payloadJson = JSON.stringify({
+          tasks: state.tasks,
+          weeklyRecords: state.weeklyRecords
+        });
+        await setDoc(docRef, {
+          payloadJson,
+          updatedAt: Date.now(),
+          updatedBy: auth.currentUser.uid
+        });
+      } catch (e) {
+        console.warn('Cloud push error:', e);
+      }
+    };
+
+    window.reconnectCloudRoom = function() {
+      subscribeRoomDocument();
+    };
+
+    initCloudSync();
+  </script>
+</body>
+</html>
