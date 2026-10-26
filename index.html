@@ -38,12 +38,18 @@
             floatUp: {
               '0%': { opacity: '1', transform: 'translateY(0) scale(0.9)' },
               '100%': { opacity: '0', transform: 'translateY(-28px) scale(1.1)' },
+            },
+            shake: {
+              '0%, 100%': { transform: 'translateX(0)' },
+              '20%, 60%': { transform: 'translateX(-6px)' },
+              '40%, 80%': { transform: 'translateX(6px)' },
             }
           },
           animation: {
             pop: 'pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
             fadeIn: 'fadeIn 0.25s ease-out forwards',
             floatUp: 'floatUp 0.9s ease-out forwards',
+            shake: 'shake 0.35s ease-in-out',
           }
         }
       }
@@ -88,6 +94,14 @@
     }
     .pixel-hero-bob {
       animation: heroBob 1.6s ease-in-out infinite;
+      image-rendering: pixelated;
+    }
+    @keyframes bossFloat {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-5px) scale(1.03); }
+    }
+    .pixel-boss-float {
+      animation: bossFloat 2s ease-in-out infinite;
       image-rendering: pixelated;
     }
   </style>
@@ -333,6 +347,11 @@
               <span id="label-uncompleted-today">未達成のみ</span>
             </label>
 
+            <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-xl cursor-pointer select-none hover:bg-slate-200/70 dark:hover:bg-slate-700/70 transition-colors" title="その日の予定が「なし」にチェックされているタスクを非表示にします">
+              <input id="filter-hide-none-today" type="checkbox" checked class="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5" />
+              <span id="label-hide-none-today">「なし」を非表示</span>
+            </label>
+
             <button id="btn-check-all-today" class="inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:hover:bg-emerald-900/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer">
               <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
               <span id="label-check-all-today">選択曜日をすべて達成</span>
@@ -398,10 +417,10 @@
 
 
     <!-- ======================================================================= -->
-    <!-- 3. RPGアドベンチャー＆ステータス（一番下部：現在の舞台と舞台クエスト） -->
+    <!-- 3. RPGアドベンチャー＆ステータス（一番下部：現在の舞台・舞台クエスト・BOSS討伐・装備ショップ） -->
     <!-- ======================================================================= -->
     <section id="rpg-bottom-section" class="scroll-mt-28 rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-4 sm:p-7 shadow-xl border border-indigo-800/60 space-y-6">
-      <!-- JSで現在の舞台・ワールドマップ・舞台クエスト・4カテゴリーステータスを描画 -->
+      <!-- JSで現在の舞台・ワールドマップ・舞台クエスト・BOSSバトル・4カテゴリーステータスを描画 -->
     </section>
 
   </main>
@@ -725,11 +744,20 @@
             </div>
             <div class="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/70 border border-amber-200/60 dark:border-amber-800/50">
               <span class="font-extrabold text-emerald-600 dark:text-emerald-400">📱 スマホでの使い方：</span>
-              スマホのGeminiアプリ（またはブラウザ）でこのページを開き、プレビューを表示します。または、無料公開サービス（GitHub Pages や Netlify Drop など）に <code>index.html</code> をドラッグ＆ドロップして自分専用のURLを作ると、Safari / Chrome の<strong>「ホーム画面に追加」</strong>から本物のアプリのようにワンタップ起動できます。
+              無料公開サービス（GitHub Pages や Netlify Drop など）に <code>index.html</code> をアップロードして自分専用のURLを作ると、Safari / Chrome の<strong>「ホーム画面に追加」</strong>から本物のアプリのようにワンタップ起動＆完全自動保存で使えます。
             </div>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- モーダル 3: ⚔️ 舞台ボス討伐 ターン制コマンドバトルモーダル -->
+  <!-- ======================================================================= -->
+  <div id="boss-battle-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
+    <div id="boss-battle-window" class="w-full max-w-2xl rounded-3xl bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950 border-2 border-rose-500/70 text-white shadow-[0_0_50px_rgba(244,63,94,0.35)] overflow-hidden animate-fadeIn my-4">
+      <!-- JSでバトル画面をリアルタイム描画 -->
     </div>
   </div>
 
@@ -756,7 +784,7 @@
         name: '仕事',
         sub: '業務・プロジェクト・生産性',
         icon: 'briefcase',
-        hex: '#2563eb', // Blue
+        hex: '#2563eb',
         badgeBg: 'bg-blue-100 dark:bg-blue-950/90',
         badgeText: 'text-blue-700 dark:text-blue-300',
         badgeBorder: 'border-blue-200 dark:border-blue-800',
@@ -773,7 +801,7 @@
         name: '家事',
         sub: '掃除・料理・暮らしの整頓',
         icon: 'home',
-        hex: '#d97706', // Amber
+        hex: '#d97706',
         badgeBg: 'bg-amber-100 dark:bg-amber-950/90',
         badgeText: 'text-amber-800 dark:text-amber-300',
         badgeBorder: 'border-amber-200 dark:border-amber-800',
@@ -790,7 +818,7 @@
         name: '自己研鑽',
         sub: '読書・語学・資格・スキル',
         icon: 'graduation-cap',
-        hex: '#7c3aed', // Purple
+        hex: '#7c3aed',
         badgeBg: 'bg-purple-100 dark:bg-purple-950/90',
         badgeText: 'text-purple-700 dark:text-purple-300',
         badgeBorder: 'border-purple-200 dark:border-purple-800',
@@ -807,7 +835,7 @@
         name: '健康',
         sub: '運動・ストレッチ・睡眠・食事',
         icon: 'heart-pulse',
-        hex: '#059669', // Emerald
+        hex: '#059669',
         badgeBg: 'bg-emerald-100 dark:bg-emerald-950/90',
         badgeText: 'text-emerald-700 dark:text-emerald-300',
         badgeBorder: 'border-emerald-200 dark:border-emerald-800',
@@ -823,7 +851,7 @@
 
     const CATEGORY_ORDER = ['work', 'housework', 'study', 'health'];
 
-    // 3. 初期サンプルデータ（タスク基本定義＋デフォルト目標＋タスクごとのEXPランダム幅）
+    // 3. 初期サンプルデータ
     const INITIAL_HABITS = [
       {
         id: 'task-work-1',
@@ -980,17 +1008,17 @@
     ];
 
     // =======================================================================
-    // RPG 舞台（ステージ）＆ ステータス ＆ 装備ショップ定義
+    // RPG 舞台（ステージ）＆ 守護BOSS ＆ ステータス ＆ 装備ショップ定義
     // =======================================================================
-    const EXP_PER_CHECK = 20; // デフォルト基準値
+    const EXP_PER_CHECK = 20;
     const EXP_PER_CAT_LEVEL = 120;
     const EXP_PER_PLAYER_LEVEL = 200;
 
-    // 装備ショップのアイテム定義（ドット絵の見た目とステータスに直結）
+    // 装備ショップのアイテム定義
     const RPG_SHOP_ITEMS = [
       // 武器 (weapon)
       { id: 'wp_wood', slot: 'weapon', slotLabel: '武器', name: '木の剣', price: 0, bonusStat: 'ATK +5', atk: 5, def: 0, mag: 0, spd: 0, bladeColor: '#d97706', hiltColor: '#78350f', glowColor: null, emoji: '🗡️' },
-      { id: 'wp_iron', slot: 'weapon', slotLabel: '武器', name: '鋼のブレード', price: 100, bonusStat: 'ATK +18', atk: 18, def: 0, mag: 0, spd: 2, bladeColor: '#e2e8f0', hiltColor: '#475569', glowColor: null, emoji: '⚔️' },
+      { id: 'wp_iron', slot: 'weapon', slotLabel: '武器', name: '鋼のブレード', price: 100, bonusStat: 'ATK +18 / SPD +2', atk: 18, def: 0, mag: 0, spd: 2, bladeColor: '#e2e8f0', hiltColor: '#475569', glowColor: null, emoji: '⚔️' },
       { id: 'wp_flame', slot: 'weapon', slotLabel: '武器', name: 'フレイムソード', price: 240, bonusStat: 'ATK +32 / INT +10', atk: 32, def: 0, mag: 10, spd: 5, bladeColor: '#ef4444', hiltColor: '#f59e0b', glowColor: '#fca5a5', emoji: '🔥' },
       { id: 'wp_mythril', slot: 'weapon', slotLabel: '武器', name: 'ミスリル銀剣', price: 400, bonusStat: 'ATK +48 / SPD +12', atk: 48, def: 5, mag: 15, spd: 12, bladeColor: '#38bdf8', hiltColor: '#e0f2fe', glowColor: '#bae6fd', emoji: '❄️' },
       { id: 'wp_excalibur', slot: 'weapon', slotLabel: '武器', name: '伝説の聖剣エクスカリバー', price: 700, bonusStat: 'ATK +80 / 全能力UP', atk: 80, def: 15, mag: 25, spd: 20, bladeColor: '#fef08a', hiltColor: '#f59e0b', glowColor: '#fde047', emoji: '✨' },
@@ -1011,7 +1039,7 @@
       // 頭装備 (helm)
       { id: 'hm_bandana', slot: 'helm', slotLabel: '頭装備', name: '冒険者の赤ハチマキ', price: 0, bonusStat: 'SPD +3', atk: 2, def: 2, mag: 0, spd: 3, style: 'bandana', color: '#ef4444', accent: '#fca5a5', emoji: '🎀' },
       { id: 'hm_circlet', slot: 'helm', slotLabel: '頭装備', name: '白銀のサークレット', price: 110, bonusStat: 'INT +15 / DEF +10', atk: 0, def: 10, mag: 15, spd: 5, style: 'circlet', color: '#93c5fd', accent: '#f59e0b', emoji: '💠' },
-      { id: 'hm_horns', slot: 'helm', slotLabel: '頭装備', name: 'ヴァイキングヘルム', price: 250, bonusStat: 'ATK +25 / DEF +20', atk: 25, def: 20, mag: 0, spd: 5, style: 'horns', color: '#94a3b8', accent: '#fef08a', emoji: ' horned' },
+      { id: 'hm_horns', slot: 'helm', slotLabel: '頭装備', name: 'ヴァイキングヘルム', price: 250, bonusStat: 'ATK +25 / DEF +20', atk: 25, def: 20, mag: 0, spd: 5, style: 'horns', color: '#94a3b8', accent: '#fef08a', emoji: '🪖' },
       { id: 'hm_wizard', slot: 'helm', slotLabel: '頭装備', name: '大魔導士の三角帽', price: 390, bonusStat: 'INT +45 / SPD +15', atk: 5, def: 15, mag: 45, spd: 15, style: 'wizard', color: '#6d28d9', accent: '#facc15', emoji: '🧙' },
       { id: 'hm_crown', slot: 'helm', slotLabel: '頭装備', name: 'グランドマスター王冠', price: 680, bonusStat: '全能力 +35', atk: 35, def: 35, mag: 35, spd: 35, style: 'crown', color: '#facc15', accent: '#ef4444', emoji: '👑' }
     ];
@@ -1031,51 +1059,135 @@
       { minLv: 12, title: '習慣のグランドマスター', emoji: '👑' }
     ];
 
+    // 各舞台と守護BOSSの定義（クエスト達成ギリギリのレベルだとギリギリきつい絶妙な強さバランス）
+    // ※例：舞台①クエストクリア時点（全カテゴリLv2, 総合Lv3）の初期装備ステータスは
+    //   HP:235, MP:120, ATK:58, DEF:59, INT:50, SPD:60（戦闘力:916）
+    //   装備を1〜2個買うか、必殺技＆回復を駆使してギリギリ倒せる強さに設定！
     const RPG_STAGES = [
       {
         id: 1,
         name: '① 始まりの村',
         shortName: '① 始まりの村',
         emoji: '🏡',
-        desc: '冒険の第一歩！まずは4つの基本ステータスをバランスよく鍛えて旅立ちの準備を整えよう。',
+        desc: '冒険の第一歩！まずは4つの基本ステータスをLv.2まで鍛え、村の出口を塞ぐボスを討伐しよう！',
         questTitle: 'クエスト：仕事・家事・自己研鑽・健康をそれぞれ Lv.2 までアップ',
-        reqLevel: 2
+        reqLevel: 2,
+        boss: {
+          name: '怠惰のキングスライム',
+          title: '始まりの村の守護ボス',
+          emoji: '👾',
+          hp: 460,
+          atk: 78,
+          def: 35,
+          spd: 55,
+          rewardGold: 150,
+          recommendedPower: 980,
+          skillName: '二度寝の誘惑プレス',
+          desc: '「あと5分だけ…」と冒険者の足を引っ張る巨大な魔物。クエスト達成直後の初期装備だと苦戦必至！ショップで武器か防具を1つ整えるか、MPを使った魔法・回復で突破しよう！',
+          mainColor: '#8b5cf6',
+          subColor: '#c4b5fd',
+          eyeColor: '#ef4444'
+        }
       },
       {
         id: 2,
         name: '② 風車の草原',
         shortName: '② 風車の草原',
         emoji: '🌿',
-        desc: '爽やかな風が吹く草原エリア。日々のルーティンを定着させ、さらなる高みを目指そう！',
+        desc: '爽やかな風が吹く草原エリア。日々のルーティンを定着させ、草原の主を打ち破れ！',
         questTitle: 'クエスト：仕事・家事・自己研鑽・健康をそれぞれ Lv.3 までアップ',
-        reqLevel: 3
+        reqLevel: 3,
+        boss: {
+          name: '先延ばしの疾風グリフォン',
+          title: '風車の草原の守護ボス',
+          emoji: '🦅',
+          hp: 740,
+          atk: 112,
+          def: 52,
+          spd: 88,
+          rewardGold: 260,
+          recommendedPower: 1380,
+          skillName: '明日から本気ストーム',
+          desc: '予定を吹き飛ばす暴風の魔獣。素早さと攻撃力が高く、Lv.3到達直後ではギリギリの死闘になる強敵！',
+          mainColor: '#059669',
+          subColor: '#6ee7b7',
+          eyeColor: '#facc15'
+        }
       },
       {
         id: 3,
         name: '③ 知恵と活力の城下町',
         shortName: '③ 城下町',
         emoji: '🏰',
-        desc: '多くの熟練者が集う活気ある城下町。4つの力をさらに磨き上げて一流の冒険者へ！',
+        desc: '多くの熟練者が集う活気ある城下町。4つの力をさらに磨き上げて重装甲の守護者を突破せよ！',
         questTitle: 'クエスト：仕事・家事・自己研鑽・健康をそれぞれ Lv.4 までアップ',
-        reqLevel: 4
+        reqLevel: 4,
+        boss: {
+          name: '三日坊主のアイアンゴーレム',
+          title: '城下町の守護ボス',
+          emoji: '🗿',
+          hp: 1120,
+          atk: 152,
+          def: 82,
+          spd: 95,
+          rewardGold: 400,
+          recommendedPower: 1850,
+          skillName: '挫折のメガトンハンマー',
+          desc: '圧倒的な防御力とHPを誇る鉄壁の巨人。物理防御が高いため、自己研鑽（INT）を活かした魔導アーツが攻略のカギ！',
+          mainColor: '#475569',
+          subColor: '#94a3b8',
+          eyeColor: '#f97316'
+        }
       },
       {
         id: 4,
         name: '④ 習慣の霊峰',
         shortName: '④ 習慣の霊峰',
         emoji: '⛰️',
-        desc: '揺るぎない継続力を持つ者だけが登れる険しい霊峰。頂上はもうすぐそこだ！',
+        desc: '揺るぎない継続力を持つ者だけが登れる険しい霊峰。頂上に巣食う氷竜を討伐せよ！',
         questTitle: 'クエスト：仕事・家事・自己研鑽・健康をそれぞれ Lv.6 までアップ',
-        reqLevel: 6
+        reqLevel: 6,
+        boss: {
+          name: '忘却のフロストドラゴン',
+          title: '習慣の霊峰の守護ボス',
+          emoji: '🐉',
+          hp: 1850,
+          atk: 225,
+          def: 118,
+          spd: 145,
+          rewardGold: 650,
+          recommendedPower: 2700,
+          skillName: '絶対零度のマンネリブレス',
+          desc: '情熱を凍てつかせる古の氷竜。上位の武器・鎧をショップで揃えて挑まなければ耐えきれない猛攻を放つ！',
+          mainColor: '#0284c7',
+          subColor: '#7dd3fc',
+          eyeColor: '#fef08a'
+        }
       },
       {
         id: 5,
         name: '⑤ 伝説の天空神殿',
         shortName: '⑤ 天空神殿',
         emoji: '🏛️',
-        desc: 'すべての習慣を極めし者が辿り着く伝説の神殿。さらなる高みへ限界突破を続けよう！',
+        desc: 'すべての習慣を極めし者が辿り着く伝説の神殿。最後の試練を超え、真のグランドマスターとなれ！',
         questTitle: 'クエスト：仕事・家事・自己研鑽・健康をそれぞれ Lv.8 までアップ',
-        reqLevel: 8
+        reqLevel: 8,
+        boss: {
+          name: '混沌の魔王カオス・ルーティン',
+          title: '天空神殿の最終守護神',
+          emoji: '👿',
+          hp: 2900,
+          atk: 315,
+          def: 165,
+          spd: 195,
+          rewardGold: 1200,
+          recommendedPower: 3850,
+          skillName: '終焉のオーバーワーク・メテオ',
+          desc: 'すべての試練の果てに待つ最強の魔王。4つの習慣力と伝説の装備を総動員して勝利を掴み取れ！',
+          mainColor: '#be123c',
+          subColor: '#fda4af',
+          eyeColor: '#fde047'
+        }
       }
     ];
 
@@ -1147,6 +1259,7 @@
       weeklyRecords: {},
       rpgShop: {
         spentGold: 0,
+        bonusGold: 0,
         ownedItems: ['wp_wood', 'sh_wood', 'ar_tunic', 'hm_bandana'],
         equipped: {
           weapon: 'wp_wood',
@@ -1155,11 +1268,13 @@
           helm: 'hm_bandana'
         },
         selectedSlotFilter: 'all',
-        isOpen: false
+        isOpen: false,
+        defeatedBosses: [] // 討伐済みボスのステージID配列 [1, 2, ...]
       },
       selectedTodayKey: getRealTodayDayKey(),
       selectedCategory: 'all',
       onlyUncompletedToday: false,
+      hideNoneToday: true,
       searchQuery: '',
       modalSelectedCategory: 'work',
       deleteConfirmId: null,
@@ -1169,6 +1284,22 @@
       recordViewMode: window.innerWidth < 768 ? 'cards' : 'table',
       syncRoomKey: localStorage.getItem('habitflow_v4_sync_room_key') || 'default-habit-board',
       cloudConnected: false
+    };
+
+    // ボスバトル進行中のリアルタイム状態（モーダル用）
+    let bossBattleState = {
+      isOpen: false,
+      stageId: 1,
+      turn: 1,
+      heroHp: 100,
+      heroMaxHp: 100,
+      heroMp: 50,
+      heroMaxMp: 50,
+      bossHp: 400,
+      bossMaxHp: 400,
+      bossCharging: false,
+      status: 'fighting', // 'fighting' | 'victory' | 'defeat'
+      logs: []
     };
 
     function getActiveWeekKey() {
@@ -1206,12 +1337,16 @@
           weekData[task.id] = {
             weeklyGoal: task.defaultWeeklyGoal || '',
             dailyGoals: { ...(task.defaultDailyGoals || { mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' }) },
+            dailyNone: { ...(task.defaultDailyNone || { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false }) },
             checks: defaultChecks,
             expGains: defaultExpGains
           };
         } else {
           if (!weekData[task.id].expGains) {
             weekData[task.id].expGains = {};
+          }
+          if (!weekData[task.id].dailyNone) {
+            weekData[task.id].dailyNone = { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false };
           }
         }
       });
@@ -1226,6 +1361,7 @@
         const rec = weekData[task.id] || {
           weeklyGoal: task.defaultWeeklyGoal || '',
           dailyGoals: { ...(task.defaultDailyGoals || {}) },
+          dailyNone: { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false },
           checks: { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false },
           expGains: {}
         };
@@ -1238,19 +1374,29 @@
           expMax: Number(task.expMax) || 30,
           weeklyGoal: rec.weeklyGoal,
           dailyGoals: rec.dailyGoals,
+          dailyNone: rec.dailyNone || { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false },
           checks: rec.checks,
           expGains: rec.expGains || {}
         };
       });
     }
 
+    function isTaskDayNone(habit, dayKey) {
+      if (habit.dailyNone && habit.dailyNone[dayKey]) return true;
+      const txt = ((habit.dailyGoals && habit.dailyGoals[dayKey]) || '').trim();
+      return txt === 'なし';
+    }
+
     function ensureRpgShopDefaults() {
       if (!state.rpgShop) {
         state.rpgShop = {
           spentGold: 0,
+          bonusGold: 0,
           ownedItems: ['wp_wood', 'sh_wood', 'ar_tunic', 'hm_bandana'],
           equipped: { weapon: 'wp_wood', shield: 'sh_wood', armor: 'ar_tunic', helm: 'hm_bandana' },
-          selectedSlotFilter: 'all'
+          selectedSlotFilter: 'all',
+          isOpen: false,
+          defeatedBosses: []
         };
       }
       if (!Array.isArray(state.rpgShop.ownedItems)) {
@@ -1270,6 +1416,12 @@
       if (typeof state.rpgShop.isOpen !== 'boolean') {
         state.rpgShop.isOpen = false;
       }
+      if (!Array.isArray(state.rpgShop.defeatedBosses)) {
+        state.rpgShop.defeatedBosses = [];
+      }
+      if (typeof state.rpgShop.bonusGold !== 'number') {
+        state.rpgShop.bonusGold = 0;
+      }
     }
 
     function setupInitialSampleData() {
@@ -1286,10 +1438,12 @@
       }));
       state.weeklyRecords = {};
       ensureRpgShopDefaults();
+      state.rpgShop.defeatedBosses = [];
+      state.rpgShop.spentGold = 0;
+      state.rpgShop.bonusGold = 0;
       ensureWeekRecordExists(currentWeekMondayKey);
     }
 
-    // Smart LocalStorage Load & Merge to Prevent Reset on Update
     function loadState() {
       try {
         const savedV4 = localStorage.getItem('habitflow_v4_multiweek_data');
@@ -1307,7 +1461,6 @@
             }
             ensureRpgShopDefaults();
 
-            // Ensure any new default tasks from INITIAL_HABITS are also present without overwriting user edits
             INITIAL_HABITS.forEach(sample => {
               if (!state.tasks.some(t => t.id === sample.id || t.name === sample.name)) {
                 state.tasks.push({
@@ -1329,31 +1482,7 @@
             setupInitialSampleData();
           }
         } else {
-          const savedV3 = localStorage.getItem('habitflow_v3_step_data');
-          if (savedV3) {
-            const parsedV3 = JSON.parse(savedV3);
-            if (Array.isArray(parsedV3) && parsedV3.length > 0) {
-              state.tasks = parsedV3.map(h => ({
-                id: h.id,
-                category: h.category,
-                name: h.name,
-                targetDays: h.targetDays || 5,
-                expMin: h.expMin || 15,
-                expMax: h.expMax || 30,
-                defaultWeeklyGoal: h.weeklyGoal || '',
-                defaultDailyGoals: { ...(h.dailyGoals || {}) },
-                initialChecks: { ...(h.checks || {}) }
-              }));
-              state.weeklyRecords = {};
-              ensureRpgShopDefaults();
-              ensureWeekRecordExists(currentWeekMondayKey);
-              saveState();
-            } else {
-              setupInitialSampleData();
-            }
-          } else {
-            setupInitialSampleData();
-          }
+          setupInitialSampleData();
         }
 
         const savedTheme = localStorage.getItem('habitflow_v3_theme');
@@ -1407,8 +1536,11 @@
     window.resetFilters = function() {
       state.selectedCategory = 'all';
       state.onlyUncompletedToday = false;
+      state.hideNoneToday = false;
       state.searchQuery = '';
       document.getElementById('filter-uncompleted-today').checked = false;
+      const hideNoneEl = document.getElementById('filter-hide-none-today');
+      if (hideNoneEl) hideNoneEl.checked = false;
       document.getElementById('search-input').value = '';
       renderAll();
     };
@@ -1465,18 +1597,18 @@
       const container = document.getElementById('stage-clear-banner-container');
       if (!container) return;
       const banner = document.createElement('div');
-      banner.className = 'pointer-events-auto w-full rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-500 text-slate-950 p-4 shadow-2xl border-2 border-white/80 animate-pop text-center';
+      banner.className = 'pointer-events-auto w-full rounded-2xl bg-gradient-to-r from-rose-600 via-amber-500 to-rose-600 text-white p-4 shadow-2xl border-2 border-white/80 animate-pop text-center';
       banner.innerHTML = `
-        <div class="text-xs font-black tracking-widest uppercase">🎉 STAGE QUEST CLEAR! 🎉</div>
+        <div class="text-xs font-black tracking-widest uppercase">🔥 STAGE QUEST & BOSS ALERT! 🔥</div>
         <div class="text-base sm:text-lg font-extrabold mt-0.5">${escapeHtml(title)}</div>
-        <div class="text-xs font-bold mt-0.5 opacity-90">${escapeHtml(subtitle)}</div>
+        <div class="text-xs font-bold mt-0.5 opacity-95">${escapeHtml(subtitle)}</div>
       `;
       container.appendChild(banner);
       setTimeout(() => {
         banner.style.opacity = '0';
         banner.style.transition = 'opacity 0.35s ease';
         setTimeout(() => banner.remove(), 360);
-      }, 4500);
+      }, 4800);
     }
 
     function spawnFloatingExp(event, gainedExp, isHighRoll) {
@@ -1524,6 +1656,7 @@
           currData[task.id] = {
             weeklyGoal: prevData[task.id].weeklyGoal || task.defaultWeeklyGoal || '',
             dailyGoals: { ...(prevData[task.id].dailyGoals || {}) },
+            dailyNone: { ...(prevData[task.id].dailyNone || { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false }) },
             checks: currData[task.id]?.checks || { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false }
           };
         }
@@ -1585,10 +1718,72 @@
         if (!state.weeklyRecords[weekKey][taskId].dailyGoals) {
           state.weeklyRecords[weekKey][taskId].dailyGoals = {};
         }
-        state.weeklyRecords[weekKey][taskId].dailyGoals[dayKey] = newText.trim();
+        if (!state.weeklyRecords[weekKey][taskId].dailyNone) {
+          state.weeklyRecords[weekKey][taskId].dailyNone = {};
+        }
+        const trimmed = newText.trim();
+        state.weeklyRecords[weekKey][taskId].dailyGoals[dayKey] = trimmed;
+        if (trimmed === 'なし') {
+          state.weeklyRecords[weekKey][taskId].dailyNone[dayKey] = true;
+        } else if (trimmed !== '') {
+          state.weeklyRecords[weekKey][taskId].dailyNone[dayKey] = false;
+        }
       }
       saveState();
+      renderAll();
       showToast('📌 各日の目標を保存しました');
+    };
+
+    window.toggleDailyNone = function(taskId, dayKey, isNone) {
+      const weekKey = getActiveWeekKey();
+      ensureWeekRecordExists(weekKey);
+      const rec = state.weeklyRecords[weekKey][taskId];
+      if (!rec) return;
+      if (!rec.dailyNone) rec.dailyNone = {};
+      if (!rec.dailyGoals) rec.dailyGoals = {};
+
+      rec.dailyNone[dayKey] = !!isNone;
+      if (isNone) {
+        rec.dailyGoals[dayKey] = 'なし';
+        if (rec.checks && rec.checks[dayKey]) {
+          rec.checks[dayKey] = false;
+          if (rec.expGains) delete rec.expGains[dayKey];
+        }
+      } else {
+        if (rec.dailyGoals[dayKey] === 'なし') {
+          rec.dailyGoals[dayKey] = '';
+        }
+      }
+      saveState();
+      renderAll();
+      showToast(isNone ? '💤 その日の予定を「なし」に設定しました' : '✏️ 「なし」を解除しました');
+    };
+
+    window.toggleModalDailyNone = function(dayKey, isNone) {
+      const inputEl = document.getElementById(`modal-daily-${dayKey}`);
+      if (!inputEl) return;
+      if (isNone) {
+        inputEl.value = 'なし';
+        inputEl.classList.add('opacity-50', 'bg-slate-200', 'dark:bg-slate-900');
+      } else {
+        if (inputEl.value.trim() === 'なし') {
+          inputEl.value = '';
+        }
+        inputEl.classList.remove('opacity-50', 'bg-slate-200', 'dark:bg-slate-900');
+      }
+    };
+
+    window.onModalDailyTextInput = function(dayKey, val) {
+      const cb = document.getElementById(`modal-daily-none-${dayKey}`);
+      const inputEl = document.getElementById(`modal-daily-${dayKey}`);
+      if (!cb || !inputEl) return;
+      if (val.trim() === 'なし') {
+        cb.checked = true;
+        inputEl.classList.add('opacity-50', 'bg-slate-200', 'dark:bg-slate-900');
+      } else {
+        cb.checked = false;
+        inputEl.classList.remove('opacity-50', 'bg-slate-200', 'dark:bg-slate-900');
+      }
     };
 
     window.clearTaskDailyGoals = function(taskId) {
@@ -1597,6 +1792,9 @@
       if (state.weeklyRecords[weekKey][taskId]) {
         state.weeklyRecords[weekKey][taskId].dailyGoals = {
           mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: ''
+        };
+        state.weeklyRecords[weekKey][taskId].dailyNone = {
+          mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false
         };
       }
       saveState();
@@ -1629,6 +1827,9 @@
         if (weekData[task.id]) {
           weekData[task.id].dailyGoals = {
             mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: ''
+          };
+          weekData[task.id].dailyNone = {
+            mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false
           };
         }
       });
@@ -1679,12 +1880,12 @@
       saveState();
       const afterRpg = calculateRpgStats();
 
-      if (newVal && afterRpg.activeStage.id > beforeRpg.activeStage.id) {
+      // クエスト条件をすべて達成して守護BOSSが出現した瞬間のお祝い＆警告バナー
+      if (newVal && !beforeRpg.isActiveQuestMet && afterRpg.isActiveQuestMet && !afterRpg.isActiveBossDefeated) {
         showStageClearBanner(
-          `「${beforeRpg.activeStage.name}」のクエスト達成！`,
-          `新たな舞台「${afterRpg.activeStage.name}」へ進みました！`
+          `「${afterRpg.activeStage.name}」のクエスト達成！`,
+          `⚠️ 守護BOSS「${afterRpg.activeStage.boss.name}」が出現しました！討伐して次の舞台へ進もう！`
         );
-        state.viewingStageId = null;
       } else if (newVal && afterRpg.playerLevel > beforeRpg.playerLevel) {
         showToast(`🎉 LEVEL UP! 総合レベルが Lv.${afterRpg.playerLevel} に上がりました！(+${rolledExp} EXP)`);
       }
@@ -1692,6 +1893,9 @@
       renderAll();
     };
 
+    // =======================================================================
+    // RPG ステータス＆舞台進行度（BOSS討伐必須ロック付き）の計算
+    // =======================================================================
     function calculateRpgStats() {
       ensureRpgShopDefaults();
       const catCheckCounts = { work: 0, housework: 0, study: 0, health: 0 };
@@ -1748,8 +1952,8 @@
       const playerLevelExp = totalExp % EXP_PER_PLAYER_LEVEL;
       const playerNextPct = Math.min(100, Math.round((playerLevelExp / EXP_PER_PLAYER_LEVEL) * 100));
 
-      // 獲得EXPに応じてゴールドも獲得（初期ボーナス50G＋累計EXPと同量のG）
-      const totalEarnedGold = 50 + totalExp;
+      // ゴールド計算（初期ボーナス50G＋累計EXP＋ボス討伐報酬ゴールド－消費ゴールド）
+      const totalEarnedGold = 50 + totalExp + (Number(state.rpgShop.bonusGold) || 0);
       const currentGold = Math.max(0, totalEarnedGold - (Number(state.rpgShop.spentGold) || 0));
 
       let currentTitle = RPG_TITLES[0];
@@ -1757,11 +1961,14 @@
         if (playerLevel >= t.minLv) currentTitle = t;
       });
 
+      // ★重要：クエスト達成「かつ」その舞台のBOSSを討伐済みでないと次の舞台に進めない！
       let activeStageIndex = 0;
       for (let i = 0; i < RPG_STAGES.length; i++) {
         const stg = RPG_STAGES[i];
-        const allCleared = CATEGORY_ORDER.every(catId => categories[catId].level >= stg.reqLevel);
-        if (allCleared) {
+        const questMet = CATEGORY_ORDER.every(catId => categories[catId].level >= stg.reqLevel);
+        const bossDefeated = state.rpgShop.defeatedBosses.includes(stg.id);
+
+        if (questMet && bossDefeated) {
           activeStageIndex = Math.min(i + 1, RPG_STAGES.length - 1);
         } else {
           activeStageIndex = i;
@@ -1770,6 +1977,8 @@
       }
 
       const activeStage = RPG_STAGES[activeStageIndex];
+      const isActiveQuestMet = CATEGORY_ORDER.every(catId => categories[catId].level >= activeStage.reqLevel);
+      const isActiveBossDefeated = state.rpgShop.defeatedBosses.includes(activeStage.id);
 
       return {
         totalExp,
@@ -1781,7 +1990,9 @@
         currentTitle,
         categories,
         activeStageIndex,
-        activeStage
+        activeStage,
+        isActiveQuestMet,
+        isActiveBossDefeated
       };
     }
 
@@ -1818,7 +2029,7 @@
         saveState();
         renderBottomRpgSection();
         lucide.createIcons();
-        showToast(`${item.emoji} 「${item.name}」を装備しました！主人公の見た目が変化しました！`);
+        showToast(`${item.emoji} 「${item.name}」を装備しました！主人公の見た目と戦闘力が変化しました！`);
         return;
       }
 
@@ -1837,7 +2048,7 @@
       showToast(`🛍️ 「${item.name}」を購入して装備しました！`);
     };
 
-    // 装備中のアイテム（武器・盾・鎧・頭装備）に合わせて見た目がリアルタイムに変わる16x16ドット絵SVG
+    // 16x16 主人公ドット絵SVG
     function getHeroPixelArtSvg(rpg) {
       ensureRpgShopDefaults();
       const eq = state.rpgShop.equipped;
@@ -1890,52 +2101,28 @@
 
       return `
         <svg viewBox="0 0 16 16" class="w-20 h-20 sm:w-24 sm:h-24 pixel-hero-bob drop-shadow-[0_6px_12px_rgba(0,0,0,0.6)]" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
-          <!-- 武器・高ランク鎧のオーラ -->
-          ${weaponItem.glowColor ? `
-            <rect x="1" y="2" width="14" height="12" fill="${weaponItem.glowColor}" opacity="0.14" />
-          ` : ''}
-
-          <!-- マント背面 (鎧に連動) -->
-          ${capeColor ? `
-            <rect x="3" y="6" width="9" height="7" fill="${capeColor}" />
-            <rect x="2" y="8" width="2" height="5" fill="${capeColor}" />
-          ` : ''}
-
-          <!-- ベースの髪 -->
+          ${weaponItem.glowColor ? `<rect x="1" y="2" width="14" height="12" fill="${weaponItem.glowColor}" opacity="0.14" />` : ''}
+          ${capeColor ? `<rect x="3" y="6" width="9" height="7" fill="${capeColor}" /><rect x="2" y="8" width="2" height="5" fill="${capeColor}" />` : ''}
           <rect x="5" y="2" width="6" height="2" fill="#78350f" />
           <rect x="4" y="3" width="2" height="3" fill="#78350f" />
           <rect x="10" y="3" width="1" height="2" fill="#78350f" />
-
-          <!-- 頭装備 (ショップ装備に連動) -->
           ${helmSvg}
-
-          <!-- 顔・目 -->
           <rect x="5" y="4" width="6" height="3" fill="#fed7aa" />
           <rect x="6" y="5" width="1" height="1" fill="#0f172a" />
           <rect x="9" y="5" width="1" height="1" fill="#0f172a" />
-
-          <!-- 胴体・アーマー (ショップ鎧に連動) -->
           <rect x="5" y="7" width="6" height="5" fill="${armorMain}" />
           <rect x="6" y="7" width="4" height="3" fill="${armorLight}" />
           <rect x="5" y="10" width="6" height="1" fill="#78350f" />
           <rect x="7" y="10" width="2" height="1" fill="#facc15" />
-
-          <!-- 肩当て -->
           <rect x="4" y="7" width="1" height="2" fill="${armorLight}" />
           <rect x="11" y="7" width="1" height="2" fill="${armorLight}" />
-
-          <!-- 足・ブーツ -->
           <rect x="5" y="12" width="2" height="2" fill="#334155" />
           <rect x="9" y="12" width="2" height="2" fill="#334155" />
           <rect x="5" y="14" width="2" height="1" fill="#451a03" />
           <rect x="9" y="14" width="2" height="1" fill="#451a03" />
-
-          <!-- 盾 (ショップ盾に連動) -->
           <rect x="2" y="7" width="3" height="5" fill="${shieldMain}" />
           <rect x="3" y="8" width="1" height="3" fill="${shieldTrim}" />
           <rect x="2" y="7" width="3" height="1" fill="${shieldTrim}" />
-
-          <!-- 剣 (ショップ武器に連動) -->
           <rect x="13" y="1" width="1" height="7" fill="${bladeColor}" />
           <rect x="12" y="2" width="1" height="5" fill="#ffffff" opacity="0.65" />
           <rect x="11" y="8" width="4" height="1" fill="${hiltColor}" />
@@ -1944,7 +2131,42 @@
       `;
     }
 
-    // 4カテゴリーのレベル＋ショップで装備中のアイテムから主人公のRPG戦闘ステータスを計算するヘルパー
+    // 16x16 ボスモンスターのドット絵SVG生成
+    function getBossPixelArtSvg(stageObj) {
+      const b = stageObj.boss;
+      const mc = b.mainColor || '#8b5cf6';
+      const sc = b.subColor || '#c4b5fd';
+      const ec = b.eyeColor || '#ef4444';
+
+      return `
+        <svg viewBox="0 0 16 16" class="w-20 h-20 sm:w-24 sm:h-24 pixel-boss-float drop-shadow-[0_8px_16px_rgba(244,63,94,0.5)]" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+          <!-- 王冠・角 -->
+          <rect x="4" y="1" width="2" height="2" fill="#facc15" />
+          <rect x="7" y="0" width="2" height="3" fill="#facc15" />
+          <rect x="10" y="1" width="2" height="2" fill="#facc15" />
+          <rect x="4" y="3" width="8" height="1" fill="#eab308" />
+          <!-- ボディ -->
+          <rect x="3" y="4" width="10" height="3" fill="${mc}" />
+          <rect x="2" y="7" width="12" height="5" fill="${mc}" />
+          <rect x="1" y="9" width="14" height="4" fill="${mc}" />
+          <rect x="2" y="13" width="12" height="2" fill="${mc}" />
+          <!-- ハイライト -->
+          <rect x="4" y="5" width="3" height="2" fill="${sc}" />
+          <rect x="3" y="7" width="2" height="2" fill="${sc}" />
+          <!-- 目（威嚇） -->
+          <rect x="4" y="8" width="3" height="2" fill="#0f172a" />
+          <rect x="9" y="8" width="3" height="2" fill="#0f172a" />
+          <rect x="5" y="8" width="2" height="2" fill="${ec}" />
+          <rect x="9" y="8" width="2" height="2" fill="${ec}" />
+          <!-- 牙・口 -->
+          <rect x="5" y="11" width="6" height="2" fill="#0f172a" />
+          <rect x="5" y="11" width="1" height="1" fill="#ffffff" />
+          <rect x="10" y="11" width="1" height="1" fill="#ffffff" />
+          <rect x="7" y="12" width="2" height="1" fill="#ef4444" />
+        </svg>
+      `;
+    }
+
     function calculateHeroDetailedStatus(rpg) {
       ensureRpgShopDefaults();
       const eq = state.rpgShop.equipped;
@@ -1984,6 +2206,390 @@
         armorItem,
         helmItem
       };
+    }
+
+    // =======================================================================
+    // ⚔️ ターン制 STAGE BOSS コマンドバトル システム
+    // =======================================================================
+    window.openBossBattleModal = function(stageId) {
+      const rpg = calculateRpgStats();
+      const stageObj = RPG_STAGES.find(s => s.id === stageId) || rpg.activeStage;
+      const questMet = CATEGORY_ORDER.every(catId => rpg.categories[catId].level >= stageObj.reqLevel);
+
+      if (!questMet) {
+        showToast(`🔒 まずは舞台クエスト（全4カテゴリー Lv.${stageObj.reqLevel} 以上）を達成してください！`);
+        return;
+      }
+
+      const heroStat = calculateHeroDetailedStatus(rpg);
+      const boss = stageObj.boss;
+
+      bossBattleState = {
+        isOpen: true,
+        stageId: stageObj.id,
+        turn: 1,
+        heroHp: heroStat.hp,
+        heroMaxHp: heroStat.hp,
+        heroMp: heroStat.mp,
+        heroMaxMp: heroStat.mp,
+        bossHp: boss.hp,
+        bossMaxHp: boss.hp,
+        bossCharging: false,
+        status: 'fighting',
+        logs: [
+          `⚠️ ${stageObj.name}の守護ボス「${boss.name}」(HP: ${boss.hp}) が立ちふさがった！`,
+          `💡 クエスト達成ギリギリの能力だと強敵です。魔導アーツや回復を駆使して戦おう！`
+        ]
+      };
+
+      const modal = document.getElementById('boss-battle-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      renderBossBattleModal();
+      lucide.createIcons();
+    };
+
+    window.closeBossBattleModal = function() {
+      bossBattleState.isOpen = false;
+      const modal = document.getElementById('boss-battle-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      renderAll();
+    };
+
+    window.executeBossBattleAction = function(actionType) {
+      if (bossBattleState.status !== 'fighting') return;
+
+      const rpg = calculateRpgStats();
+      const heroStat = calculateHeroDetailedStatus(rpg);
+      const stageObj = RPG_STAGES.find(s => s.id === bossBattleState.stageId) || rpg.activeStage;
+      const boss = stageObj.boss;
+
+      let heroGuarding = false;
+      const randVariance = () => 0.92 + Math.random() * 0.16;
+
+      // 1. 主人公の行動
+      if (actionType === 'attack') {
+        const baseDmg = Math.max(12, Math.round((heroStat.atk * 1.38 - boss.def * 0.55) * randVariance()));
+        const isCrit = Math.random() < Math.min(0.35, 0.1 + heroStat.spd / 400);
+        const finalDmg = isCrit ? Math.round(baseDmg * 1.45) : baseDmg;
+        bossBattleState.bossHp = Math.max(0, bossBattleState.bossHp - finalDmg);
+        bossBattleState.logs.unshift(
+          `⚔️ 主人公の全力斬り！${isCrit ? '【会心の一撃！】' : ''} ${boss.name} に ${finalDmg} のダメージ！`
+        );
+      } else if (actionType === 'magic') {
+        const mpCost = 28;
+        if (bossBattleState.heroMp < mpCost) {
+          showToast('💧 MPが足りません！通常攻撃または回復・防御を選んでください');
+          return;
+        }
+        bossBattleState.heroMp -= mpCost;
+        // 魔法＆実務の複合奥義（ボスの防御力を一部無視して大ダメージ）
+        const magicDmg = Math.max(25, Math.round(((heroStat.mag * 1.45 + heroStat.atk * 0.75) - boss.def * 0.25) * randVariance()));
+        bossBattleState.bossHp = Math.max(0, bossBattleState.bossHp - magicDmg);
+        bossBattleState.logs.unshift(
+          `🔮 覚醒魔導アーツ発動！(MP -${mpCost}) 防御を貫き ${boss.name} に ${magicDmg} の大ダメージ！！`
+        );
+      } else if (actionType === 'heal') {
+        const mpCost = 22;
+        if (bossBattleState.heroMp < mpCost) {
+          showToast('💧 MPが足りません！');
+          return;
+        }
+        bossBattleState.heroMp -= mpCost;
+        heroGuarding = true;
+        const healAmount = Math.round(bossBattleState.heroMaxHp * 0.44 + heroStat.def * 0.6);
+        bossBattleState.heroHp = Math.min(bossBattleState.heroMaxHp, bossBattleState.heroHp + healAmount);
+        bossBattleState.logs.unshift(
+          `🌿 瞑想ヒール＆鉄壁ガード！(MP -${mpCost}) HPが ${healAmount} 回復し、次の被ダメージを軽減！`
+        );
+      }
+
+      // ボス撃破判定
+      if (bossBattleState.bossHp <= 0) {
+        bossBattleState.status = 'victory';
+        const isFirstDefeat = !state.rpgShop.defeatedBosses.includes(stageObj.id);
+        const rewardGold = isFirstDefeat ? boss.rewardGold : Math.round(boss.rewardGold * 0.3);
+
+        if (isFirstDefeat) {
+          state.rpgShop.defeatedBosses.push(stageObj.id);
+        }
+        state.rpgShop.bonusGold = (Number(state.rpgShop.bonusGold) || 0) + rewardGold;
+        state.viewingStageId = null; // 次の舞台を自動表示
+        saveState();
+
+        bossBattleState.logs.unshift(
+          `🎉 勝利！！ 守護ボス「${boss.name}」を討伐しました！報酬として +${rewardGold} G を獲得！`
+        );
+        renderBossBattleModal();
+        lucide.createIcons();
+        return;
+      }
+
+      // 2. ボスの反撃ターン
+      let bossDmg = 0;
+      if (bossBattleState.bossCharging) {
+        // 溜め攻撃（必殺技）発動！
+        const rawSkillDmg = Math.max(20, Math.round((boss.atk * 1.55 - heroStat.def * 0.68) * randVariance()));
+        bossDmg = heroGuarding ? Math.round(rawSkillDmg * 0.48) : rawSkillDmg;
+        bossBattleState.heroHp = Math.max(0, bossBattleState.heroHp - bossDmg);
+        bossBattleState.bossCharging = false;
+        bossBattleState.logs.unshift(
+          `💥 ${boss.name} の必殺技「${boss.skillName}」！！ 主人公に ${bossDmg} の強烈なダメージ！${heroGuarding ? '（ガードで軽減！）' : ''}`
+        );
+      } else if (bossBattleState.turn % 3 === 2) {
+        // 3ターン周期の2ターン目に力を溜める予兆（ここで次ターンに回復＆ガードすると耐えやすい戦略性）
+        bossBattleState.bossCharging = true;
+        const lightDmg = Math.max(8, Math.round((boss.atk * 0.6 - heroStat.def * 0.55) * randVariance()));
+        const finalLight = heroGuarding ? Math.round(lightDmg * 0.5) : lightDmg;
+        bossBattleState.heroHp = Math.max(0, bossBattleState.heroHp - finalLight);
+        bossBattleState.logs.unshift(
+          `⚠️ ${boss.name} は牽制攻撃（${finalLight}ダメージ）を放ち、次のターンの必殺技「${boss.skillName}」に向けて不気味に力を溜めている…！`
+        );
+      } else {
+        // 通常攻撃
+        const rawNormalDmg = Math.max(12, Math.round((boss.atk * 1.12 - heroStat.def * 0.65) * randVariance()));
+        bossDmg = heroGuarding ? Math.round(rawNormalDmg * 0.5) : rawNormalDmg;
+        bossBattleState.heroHp = Math.max(0, bossBattleState.heroHp - bossDmg);
+        bossBattleState.logs.unshift(
+          `👾 ${boss.name} の猛攻！ 主人公は ${bossDmg} のダメージを受けた！`
+        );
+      }
+
+      // 3. 主人公の自然MP回復（毎ターン少しずつ知力でMP回復）
+      const mpRegen = Math.max(4, Math.round(heroStat.mag * 0.1));
+      bossBattleState.heroMp = Math.min(bossBattleState.heroMaxMp, bossBattleState.heroMp + mpRegen);
+
+      // 敗北判定
+      if (bossBattleState.heroHp <= 0) {
+        bossBattleState.status = 'defeat';
+        bossBattleState.logs.unshift(
+          `💀 主人公は力尽きてしまった…！日々のタスクを達成してレベルを上げるか、ショップで新しい装備を購入して再挑戦しよう！`
+        );
+      } else {
+        bossBattleState.turn += 1;
+      }
+
+      renderBossBattleModal();
+      lucide.createIcons();
+    };
+
+    function renderBossBattleModal() {
+      const winEl = document.getElementById('boss-battle-window');
+      if (!winEl) return;
+
+      const rpg = calculateRpgStats();
+      const heroStat = calculateHeroDetailedStatus(rpg);
+      const stageObj = RPG_STAGES.find(s => s.id === bossBattleState.stageId) || rpg.activeStage;
+      const boss = stageObj.boss;
+
+      const heroHpPct = Math.max(0, Math.min(100, Math.round((bossBattleState.heroHp / bossBattleState.heroMaxHp) * 100)));
+      const heroMpPct = Math.max(0, Math.min(100, Math.round((bossBattleState.heroMp / bossBattleState.heroMaxMp) * 100)));
+      const bossHpPct = Math.max(0, Math.min(100, Math.round((bossBattleState.bossHp / bossBattleState.bossMaxHp) * 100)));
+
+      winEl.innerHTML = `
+        <!-- バトルヘッダー -->
+        <div class="px-5 py-3.5 bg-gradient-to-r from-rose-950 via-slate-900 to-indigo-950 border-b border-rose-500/40 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-rose-600 text-white uppercase tracking-wider">
+              STAGE ${stageObj.id} BOSS BATTLE
+            </span>
+            <span class="text-xs font-extrabold text-rose-200">
+              TURN ${bossBattleState.turn}
+            </span>
+          </div>
+          <button type="button" onclick="closeBossBattleModal()" class="text-slate-400 hover:text-white text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800/80 cursor-pointer">
+            ✕ 閉じる
+          </button>
+        </div>
+
+        <div class="p-4 sm:p-6 space-y-5">
+          <!-- VS アリーナ（主人公 対 守護ボス） -->
+          <div class="grid grid-cols-1 sm:grid-cols-11 gap-4 items-center bg-slate-950/80 p-4 rounded-2xl border border-indigo-500/30 relative overflow-hidden">
+            
+            <!-- 主人公サイド -->
+            <div class="sm:col-span-5 flex flex-col items-center sm:items-start gap-2.5">
+              <div class="flex items-center gap-3 w-full">
+                <div class="w-20 h-20 rounded-2xl bg-indigo-950/90 border border-indigo-400/40 flex items-center justify-center shrink-0">
+                  ${getHeroPixelArtSvg(rpg)}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-extrabold text-indigo-300">${rpg.currentTitle.emoji} 主人公 (Lv.${rpg.playerLevel})</div>
+                  <div class="text-[11px] text-amber-300 font-bold">戦闘力: ${heroStat.combatPower}</div>
+
+                  <!-- HP -->
+                  <div class="mt-1.5">
+                    <div class="flex justify-between text-[10px] font-black">
+                      <span class="text-emerald-400">HP</span>
+                      <span>${bossBattleState.heroHp} / ${bossBattleState.heroMaxHp}</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden mt-0.5">
+                      <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300" style="width: ${heroHpPct}%"></div>
+                    </div>
+                  </div>
+
+                  <!-- MP -->
+                  <div class="mt-1">
+                    <div class="flex justify-between text-[10px] font-black">
+                      <span class="text-purple-400">MP</span>
+                      <span>${bossBattleState.heroMp} / ${bossBattleState.heroMaxMp}</span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden mt-0.5">
+                      <div class="h-full bg-gradient-to-r from-purple-500 to-indigo-400 transition-all duration-300" style="width: ${heroMpPct}%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="grid grid-cols-4 gap-1 w-full text-center text-[10px] font-bold bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
+                <div>⚔️ATK ${heroStat.atk}</div>
+                <div>🛡️DEF ${heroStat.def}</div>
+                <div>🔮INT ${heroStat.mag}</div>
+                <div>⚡SPD ${heroStat.spd}</div>
+              </div>
+            </div>
+
+            <!-- VS 中央マーク -->
+            <div class="sm:col-span-1 flex items-center justify-center">
+              <span class="w-9 h-9 rounded-full bg-rose-600/30 border border-rose-500 text-rose-300 font-black text-xs flex items-center justify-center shadow">
+                VS
+              </span>
+            </div>
+
+            <!-- BOSS サイド -->
+            <div class="sm:col-span-5 flex flex-col items-center sm:items-end gap-2.5">
+              <div class="flex items-center gap-3 w-full">
+                <div class="flex-1 min-w-0 text-right">
+                  <div class="text-[10px] font-extrabold text-rose-400 uppercase">${escapeHtml(boss.title)}</div>
+                  <div class="text-sm font-black text-white truncate">${escapeHtml(boss.name)}</div>
+                  <div class="text-[11px] text-rose-300 font-bold">推奨戦闘力: ${boss.recommendedPower}</div>
+
+                  <!-- BOSS HP -->
+                  <div class="mt-1.5">
+                    <div class="flex justify-between text-[10px] font-black">
+                      <span class="text-rose-400">BOSS HP</span>
+                      <span>${bossBattleState.bossHp} / ${bossBattleState.bossMaxHp}</span>
+                    </div>
+                    <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden mt-0.5 border border-rose-900">
+                      <div class="h-full bg-gradient-to-r from-rose-600 via-red-500 to-amber-500 transition-all duration-300" style="width: ${bossHpPct}%"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="w-20 h-20 rounded-2xl bg-rose-950/70 border ${bossBattleState.bossCharging ? 'border-amber-400 ring-2 ring-amber-400 animate-pulse' : 'border-rose-500/40'} flex items-center justify-center shrink-0">
+                  ${getBossPixelArtSvg(stageObj)}
+                </div>
+              </div>
+              <div class="w-full text-center text-[10px] font-extrabold py-1.5 px-2 rounded-xl border ${
+                bossBattleState.bossCharging
+                  ? 'bg-amber-500/20 border-amber-400 text-amber-300 animate-pulse'
+                  : 'bg-slate-900/90 border-slate-800 text-slate-300'
+              }">
+                ${bossBattleState.bossCharging
+                  ? `⚠️ 危険！次ターンに必殺技「${escapeHtml(boss.skillName)}」が来ます！（回復＆防御が有効）`
+                  : `⚔️ATK ${boss.atk} / 🛡️DEF ${boss.def} / 必殺技: ${escapeHtml(boss.skillName)}`
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- コマンドボタン または 勝敗結果パネル -->
+          ${bossBattleState.status === 'fighting' ? `
+            <div class="space-y-2">
+              <div class="text-xs font-extrabold text-indigo-200 flex items-center justify-between">
+                <span>🎮 行動コマンドを選択してください</span>
+                <span class="text-[11px] text-slate-400">※毎ターンMPが少し自然回復します</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <button
+                  type="button"
+                  onclick="executeBossBattleAction('attack')"
+                  class="p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white border border-blue-400/50 shadow-lg text-left transition active:scale-95 cursor-pointer"
+                >
+                  <div class="text-xs font-black flex items-center justify-between">
+                    <span>⚔️ 全力斬り (物理)</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-black/30">消費MP 0</span>
+                  </div>
+                  <div class="text-[11px] text-blue-100 mt-1">ATK(${heroStat.atk})で斬りつける。会心が出ると大ダメージ！</div>
+                </button>
+
+                <button
+                  type="button"
+                  onclick="executeBossBattleAction('magic')"
+                  class="p-3 rounded-2xl bg-gradient-to-br from-purple-600 to-fuchsia-700 hover:from-purple-500 hover:to-fuchsia-600 text-white border border-purple-400/50 shadow-lg text-left transition active:scale-95 cursor-pointer ${bossBattleState.heroMp < 28 ? 'opacity-50' : ''}"
+                >
+                  <div class="text-xs font-black flex items-center justify-between">
+                    <span>🔮 覚醒魔導アーツ</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-black/30">MP 28</span>
+                  </div>
+                  <div class="text-[11px] text-purple-100 mt-1">INT(${heroStat.mag})+ATKの複合奥義。敵の防御を貫通！</div>
+                </button>
+
+                <button
+                  type="button"
+                  onclick="executeBossBattleAction('heal')"
+                  class="p-3 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white border border-emerald-400/50 shadow-lg text-left transition active:scale-95 cursor-pointer ${bossBattleState.heroMp < 22 ? 'opacity-50' : ''}"
+                >
+                  <div class="text-xs font-black flex items-center justify-between">
+                    <span>🌿 瞑想ヒール＆防御</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-black/30">MP 22</span>
+                  </div>
+                  <div class="text-[11px] text-emerald-100 mt-1">HPを大幅回復し、このターンの敵の攻撃ダメージを半減！</div>
+                </button>
+              </div>
+            </div>
+          ` : bossBattleState.status === 'victory' ? `
+            <div class="p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-emerald-500/20 to-amber-500/20 border-2 border-amber-400 text-center space-y-2.5 animate-pop">
+              <div class="text-lg sm:text-xl font-black text-amber-300">
+                🎊 STAGE ${stageObj.id} BOSS 討伐成功！！ 🎊
+              </div>
+              <p class="text-xs text-white font-bold">
+                見事「${escapeHtml(boss.name)}」を打ち破り、次の舞台への道が解放されました！
+              </p>
+              <button
+                type="button"
+                onclick="closeBossBattleModal()"
+                class="px-6 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-lg cursor-pointer"
+              >
+                ✨ 新たな舞台へ進む！
+              </button>
+            </div>
+          ` : `
+            <div class="p-4 rounded-2xl bg-rose-950/70 border-2 border-rose-500 text-center space-y-2.5">
+              <div class="text-base sm:text-lg font-black text-rose-300">
+                💀 討伐失敗…（あと少し！）
+              </div>
+              <p class="text-xs text-rose-100 leading-relaxed">
+                クエスト達成直後のステータスではギリギリの強敵です！<br/>
+                <strong>① ショップで武器・防具を購入して装備する</strong> か、<strong>② 日々のタスクをあと数回達成してレベルを上げる</strong>、または <strong>③ ボスが力を溜めたターンに「🌿瞑想ヒール＆防御」を使う</strong> と突破できます！
+              </p>
+              <div class="flex items-center justify-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onclick="openBossBattleModal(${stageObj.id})"
+                  class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs cursor-pointer shadow"
+                >
+                  🔥 もう一度再戦する
+                </button>
+                <button
+                  type="button"
+                  onclick="closeBossBattleModal(); state.rpgShop.isOpen = true; renderBottomRpgSection(); lucide.createIcons();"
+                  class="px-5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs cursor-pointer shadow"
+                >
+                  🛍️ ショップで装備を整える
+                </button>
+              </div>
+            </div>
+          `}
+
+          <!-- バトルログ -->
+          <div class="rounded-2xl bg-slate-950/90 border border-slate-800 p-3.5 space-y-1.5 max-h-36 overflow-y-auto text-xs font-bold">
+            ${bossBattleState.logs.map((log, i) => `
+              <div class="${i === 0 ? 'text-amber-300' : 'text-slate-400'} leading-relaxed">
+                ${escapeHtml(log)}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
     }
 
     function renderHeaderControls() {
@@ -2207,7 +2813,6 @@
         return;
       }
 
-      // 横軸（列ヘッダー）＝ 各タスク（週目標は表示せず、タスク名を大きく目立たせる）
       headerRow.innerHTML = `
         <th class="sticky left-0 z-20 bg-slate-100 dark:bg-slate-800 py-3 pl-4 pr-3 text-xs font-extrabold text-slate-600 dark:text-slate-300 w-[115px] min-w-[115px] border-r border-slate-200/80 dark:border-slate-700">
           曜日 ＼ タスク
@@ -2288,13 +2893,11 @@
         }).join('')}
       `;
 
-      // 縦軸（行）＝ 月曜日〜日曜日
       tbody.innerHTML = weekDates.map(d => {
         const isSelected = d.key === selectedDayKey;
 
         return `
           <tr class="group transition-colors ${isSelected ? 'bg-indigo-50/35 dark:bg-indigo-950/20' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/30'}">
-            <!-- 左端固定：曜日・日付セル -->
             <th
               onclick="setTodayKey('${d.key}')"
               title="クリックして選択曜日に設定"
@@ -2323,39 +2926,60 @@
               </div>
             </th>
 
-            <!-- 各タスクのその日の達成チェック＆目標入力セル -->
             ${filtered.map(habit => {
               const cat = CATEGORIES[habit.category] || CATEGORIES.work;
-              const checked = !!(habit.checks && habit.checks[d.key]);
+              const isNone = isTaskDayNone(habit, d.key);
+              const checked = !isNone && !!(habit.checks && habit.checks[d.key]);
               const gainedExpVal = habit.expGains && habit.expGains[d.key] ? habit.expGains[d.key] : null;
               const dailyText = (habit.dailyGoals && habit.dailyGoals[d.key]) ? habit.dailyGoals[d.key] : '';
 
               return `
                 <td class="p-2 align-top border-r border-slate-200/60 dark:border-slate-800/80">
                   <div class="rounded-xl p-2 border transition-all flex flex-col gap-1.5 ${
-                    checked
+                    isNone
+                      ? 'bg-slate-100/70 dark:bg-slate-900/40 border-dashed border-slate-300 dark:border-slate-800 opacity-65'
+                      : checked
                       ? cat.cellDoneBg
                       : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800'
                   }">
-                    <button
-                      type="button"
-                      onclick="toggleCheck('${habit.id}', '${d.key}', event)"
-                      class="w-full py-1 px-2 rounded-lg text-[11px] font-extrabold flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95 ${
-                        checked
-                          ? `${cat.checkActive} check-pop shadow-2xs`
-                          : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
-                      }"
-                    >
-                      <i data-lucide="${checked ? 'check-circle-2' : 'circle'}" class="w-3.5 h-3.5"></i>
-                      <span>${checked ? `達成済 (+${gainedExpVal || habit.expMin}EXP)` : `未達成 (${habit.expMin}〜${habit.expMax})`}</span>
-                    </button>
+                    <div class="flex items-center justify-between gap-1">
+                      ${isNone ? `
+                        <div class="w-full py-1 px-2 rounded-lg text-[11px] font-bold bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-center">
+                          💤 予定なし
+                        </div>
+                      ` : `
+                        <button
+                          type="button"
+                          onclick="toggleCheck('${habit.id}', '${d.key}', event)"
+                          class="w-full py-1 px-2 rounded-lg text-[11px] font-extrabold flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95 ${
+                            checked
+                              ? `${cat.checkActive} check-pop shadow-2xs`
+                              : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+                          }"
+                        >
+                          <i data-lucide="${checked ? 'check-circle-2' : 'circle'}" class="w-3.5 h-3.5"></i>
+                          <span>${checked ? `達成済 (+${gainedExpVal || habit.expMin})` : `未達成`}</span>
+                        </button>
+                      `}
+                    </div>
 
                     <textarea
                       rows="2"
                       onchange="updateDailyGoal('${habit.id}', '${d.key}', this.value)"
                       placeholder="${d.label}曜の目標..."
-                      class="daily-goal-input w-full text-[11px] font-bold leading-tight p-1.5 rounded-lg bg-white/90 dark:bg-slate-950/70 border border-slate-200/70 dark:border-slate-800 ${cat.focusRing} focus:outline-none text-slate-800 dark:text-slate-100"
+                      ${isNone ? 'disabled' : ''}
+                      class="daily-goal-input w-full text-[11px] font-bold leading-tight p-1.5 rounded-lg bg-white/90 dark:bg-slate-950/70 border border-slate-200/70 dark:border-slate-800 ${cat.focusRing} focus:outline-none text-slate-800 dark:text-slate-100 ${isNone ? 'line-through text-slate-400 dark:text-slate-500 cursor-not-allowed' : ''}"
                     >${escapeHtml(dailyText)}</textarea>
+
+                    <label class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 cursor-pointer select-none self-end hover:text-slate-700 dark:hover:text-slate-200">
+                      <input
+                        type="checkbox"
+                        ${isNone ? 'checked' : ''}
+                        onchange="toggleDailyNone('${habit.id}', '${d.key}', this.checked)"
+                        class="rounded text-slate-600 focus:ring-indigo-500 w-3 h-3 cursor-pointer"
+                      />
+                      <span>なし</span>
+                    </label>
                   </div>
                 </td>
               `;
@@ -2379,6 +3003,9 @@
       const reqLv = displayStage.reqLevel;
       const clearedCategoriesCount = CATEGORY_ORDER.filter(catId => rpg.categories[catId].level >= reqLv).length;
       const questProgressPct = Math.round((clearedCategoriesCount / 4) * 100);
+      const isDisplayQuestMet = clearedCategoriesCount === 4;
+      const isDisplayBossDefeated = state.rpgShop.defeatedBosses.includes(displayStage.id);
+      const boss = displayStage.boss;
 
       const slotFilter = state.rpgShop.selectedSlotFilter || 'all';
       const filteredShopItems = RPG_SHOP_ITEMS.filter(item => slotFilter === 'all' || item.slot === slotFilter);
@@ -2393,7 +3020,7 @@
             <div>
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-amber-400 text-slate-950">
-                  現在の舞台
+                  ${displayStage.id === rpg.activeStage.id ? '現在の舞台' : '選択中の舞台'}
                 </span>
                 <span class="text-xs font-bold text-indigo-300">
                   (${rpg.currentTitle.emoji} ${rpg.currentTitle.title} • 総合 Lv.${rpg.playerLevel} / 累計 ${rpg.totalExp} EXP)
@@ -2415,7 +3042,8 @@
             ${RPG_STAGES.map((stg, idx) => {
               const isCurrentActive = stg.id === rpg.activeStage.id;
               const isViewing = stg.id === displayStage.id;
-              const isCleared = idx < rpg.activeStageIndex;
+              const isBossDone = state.rpgShop.defeatedBosses.includes(stg.id);
+              const isLocked = idx > rpg.activeStageIndex;
               return `
                 <button
                   type="button"
@@ -2423,16 +3051,16 @@
                   class="px-2.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap border transition-all cursor-pointer flex items-center gap-1 ${
                     isViewing
                       ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md scale-[1.03]'
-                      : isCleared
+                      : isBossDone
                       ? 'bg-emerald-950/70 text-emerald-300 border-emerald-700/70 hover:bg-emerald-900/70'
                       : isCurrentActive
                       ? 'bg-indigo-800/80 text-white border-indigo-500'
                       : 'bg-slate-900/70 text-slate-400 border-slate-800 hover:text-slate-200'
                   }"
                 >
-                  <span>${stg.emoji}</span>
+                  <span>${isLocked ? '🔒' : stg.emoji}</span>
                   <span>${escapeHtml(stg.shortName)}</span>
-                  ${isCleared ? `<span class="text-[10px]">✅</span>` : ''}
+                  ${isBossDone ? `<span class="text-[10px]">🏆</span>` : ''}
                 </button>
               `;
             }).join('')}
@@ -2443,18 +3071,15 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <!-- 左側：ドット絵の主人公スプライト＆総合レベル画面 -->
           <div class="lg:col-span-5 rounded-2xl bg-slate-950/80 border-2 border-indigo-500/40 p-4 flex flex-col sm:flex-row items-center gap-4 relative overflow-hidden shadow-inner">
-            <!-- レトロ風ドット背景ステージ -->
             <div class="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-gradient-to-b from-indigo-950 via-slate-900 to-emerald-950 border border-indigo-400/40 flex flex-col items-center justify-center shrink-0 overflow-hidden shadow-lg">
               <div class="absolute top-2 left-2.5 text-[10px] opacity-60">✨</div>
               <div class="absolute top-3 right-3 text-[10px] opacity-60">⭐</div>
               <div class="z-10 mt-1">
                 ${heroPixelSvg}
               </div>
-              <!-- ドット芝生・地面 -->
               <div class="w-full h-3 bg-emerald-600/80 border-t-2 border-emerald-400 mt-auto"></div>
             </div>
 
-            <!-- 主人公プロフィール＆HP/MP/EXPゲージ -->
             <div class="flex-1 w-full space-y-2.5">
               <div class="flex items-center justify-between gap-2">
                 <div>
@@ -2472,7 +3097,6 @@
                 </div>
               </div>
 
-              <!-- HP / MP バー -->
               <div class="grid grid-cols-2 gap-2">
                 <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
                   <div class="flex items-center justify-between text-[10px] font-black mb-1">
@@ -2494,7 +3118,6 @@
                 </div>
               </div>
 
-              <!-- 次の総合レベルまでのEXPバー -->
               <div class="space-y-1">
                 <div class="flex items-center justify-between text-[11px] font-bold text-indigo-200">
                   <span>NEXT LEVEL EXP</span>
@@ -2507,7 +3130,7 @@
             </div>
           </div>
 
-          <!-- 右側：RPGパラメーター（攻撃・防御・知力・素早さ）＆ 現在装着中の装備品 -->
+          <!-- 右側：RPGパラメーター ＆ 装着中の装備 -->
           <div class="lg:col-span-7 rounded-2xl bg-slate-950/80 border-2 border-indigo-500/40 p-4 flex flex-col justify-between gap-3 shadow-inner">
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
               <span class="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
@@ -2519,7 +3142,6 @@
               </span>
             </div>
 
-            <!-- 4つのバトルパラメーター -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <div class="p-2.5 rounded-xl bg-slate-900/90 border border-blue-500/30">
                 <div class="text-[10px] font-bold text-blue-300">⚔️ 攻撃力 (ATK)</div>
@@ -2543,7 +3165,6 @@
               </div>
             </div>
 
-            <!-- 現在装着中の装備スロット（4部位） -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
               <div class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-indigo-500/40 flex items-center gap-2">
                 <span class="text-sm">${heroStat.weaponItem.emoji}</span>
@@ -2577,7 +3198,7 @@
           </div>
         </div>
 
-        <!-- 舞台クエスト ＆ 4カテゴリー別レベルゲージ -->
+        <!-- 舞台クエスト ＆ 4カテゴリー別レベルゲージ ＆ 🔥STAGE BOSS 出現ゲート -->
         <div class="rounded-2xl bg-slate-950/65 border border-indigo-800/70 p-4 sm:p-5 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div class="flex items-center gap-2">
@@ -2588,7 +3209,7 @@
                 ${escapeHtml(displayStage.questTitle)}
               </h3>
             </div>
-            <span class="text-xs font-extrabold ${clearedCategoriesCount === 4 ? 'text-emerald-400' : 'text-amber-300'}">
+            <span class="text-xs font-extrabold ${isDisplayQuestMet ? 'text-emerald-400' : 'text-amber-300'}">
               クエスト達成度: ${clearedCategoriesCount} / 4 カテゴリー (${questProgressPct}%)
             </span>
           </div>
@@ -2647,11 +3268,79 @@
               `;
             }).join('')}
           </div>
+
+          <!-- 🔥 舞台守護 BOSS 討伐ゲート（クエスト達成で出現！倒さないと次の舞台へ進めない） -->
+          <div class="mt-4 rounded-2xl p-4 sm:p-5 border-2 transition-all ${
+            isDisplayBossDefeated
+              ? 'bg-emerald-950/40 border-emerald-500/60'
+              : isDisplayQuestMet
+              ? 'bg-gradient-to-r from-rose-950/90 via-slate-900 to-rose-950/90 border-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.25)]'
+              : 'bg-slate-900/70 border-slate-800 opacity-85'
+          }">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-950/90 border ${
+                  isDisplayQuestMet ? 'border-rose-500/70' : 'border-slate-700'
+                } flex items-center justify-center shrink-0 overflow-hidden">
+                  ${getBossPixelArtSvg(displayStage)}
+                </div>
+                <div class="space-y-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      isDisplayBossDefeated
+                        ? 'bg-emerald-500 text-slate-950'
+                        : isDisplayQuestMet
+                        ? 'bg-rose-600 text-white animate-pulse'
+                        : 'bg-slate-800 text-slate-400'
+                    }">
+                      ${isDisplayBossDefeated
+                        ? '🏆 BOSS 討伐完了'
+                        : isDisplayQuestMet
+                        ? '⚠️ STAGE BOSS 出現中！（討伐で次の舞台が解放）'
+                        : '🔒 クエスト達成で BOSS 出現'}
+                    </span>
+                    <span class="text-xs font-extrabold text-amber-300">
+                      初回討伐報酬: 💰 +${boss.rewardGold} G
+                    </span>
+                  </div>
+
+                  <div class="text-base sm:text-lg font-black text-white flex items-center gap-2 flex-wrap">
+                    <span>${escapeHtml(boss.name)}</span>
+                    <span class="text-xs font-bold text-rose-300">(HP: ${boss.hp} / ATK: ${boss.atk} / DEF: ${boss.def} / 推奨戦闘力: ${boss.recommendedPower})</span>
+                  </div>
+
+                  <p class="text-xs text-slate-300 leading-relaxed">
+                    ${escapeHtml(boss.desc)}
+                  </p>
+                </div>
+              </div>
+
+              <div class="shrink-0 flex flex-col sm:flex-row md:flex-col items-stretch sm:items-center gap-2">
+                ${isDisplayQuestMet ? `
+                  <button
+                    type="button"
+                    onclick="openBossBattleModal(${displayStage.id})"
+                    class="px-5 py-3 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition cursor-pointer active:scale-95 ${
+                      isDisplayBossDefeated
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md'
+                        : 'bg-gradient-to-r from-rose-600 via-red-500 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white shadow-xl ring-2 ring-rose-400/50'
+                    }"
+                  >
+                    <span>⚔️</span>
+                    <span>${isDisplayBossDefeated ? 'ボスと再戦する（修練）' : 'BOSSに挑戦する！'}</span>
+                  </button>
+                ` : `
+                  <div class="px-4 py-2.5 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-400 text-xs font-bold text-center">
+                    🔒 全4カテゴリーを Lv.${reqLv} にすると<br/>ボスに挑戦できます
+                  </div>
+                `}
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 一番下：🛍️ 装備ショップ（開閉対応ウィンドウ） -->
         <div class="rounded-2xl bg-slate-950/80 border border-amber-500/40 overflow-hidden transition-all">
-          <!-- ショップヘッダーバー（クリックで開閉可能） -->
           <div
             onclick="toggleRpgShopOpen()"
             class="p-4 sm:px-5 flex flex-wrap items-center justify-between gap-3 cursor-pointer hover:bg-slate-900/70 transition-colors select-none"
@@ -2661,7 +3350,7 @@
                 🛍️ 冒険者ギルドの装備ショップ
               </span>
               <span class="text-xs font-bold text-indigo-200">
-                所持ゴールド（<span class="text-yellow-300 font-black">${rpg.currentGold} G</span>）で武器・盾・鎧・頭装備を購入＆着せ替え
+                所持ゴールド（<span class="text-yellow-300 font-black">${rpg.currentGold} G</span>）で武器・盾・鎧・頭装備を購入してボス戦に備えよう！
               </span>
             </div>
 
@@ -2680,11 +3369,10 @@
           </div>
 
           ${state.rpgShop.isOpen ? `
-            <!-- ショップ中身（開いている時のみ表示） -->
             <div class="px-4 pb-4 sm:px-5 sm:pb-5 pt-3 border-t border-slate-800/90 space-y-3.5 animate-fadeIn">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <span class="text-[11px] text-slate-300">
-                  💡 購入した装備に着せ替えると、上のドット絵の主人公の見た目とステータスがリアルタイムに変化します！
+                  💡 購入した装備に着せ替えると、主人公のドット絵とステータス（攻撃力・防御力・魔力・HP/MP）が即座に強化されます！
                 </span>
                 <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                   ${[
@@ -2838,8 +3526,9 @@
 
       pillsEl.innerHTML = weekDates.map(d => {
         const isSelected = d.key === selectedDayKey;
-        const doneCount = activeHabits.filter(h => h.checks && h.checks[d.key]).length;
-        const totalCount = activeHabits.length;
+        const activeDayHabits = activeHabits.filter(h => !isTaskDayNone(h, d.key));
+        const doneCount = activeDayHabits.filter(h => h.checks && h.checks[d.key]).length;
+        const totalCount = activeDayHabits.length;
         const allDone = totalCount > 0 && doneCount === totalCount;
 
         return `
@@ -2863,23 +3552,37 @@
         `;
       }).join('');
 
-      const dayDoneCount = activeHabits.filter(h => h.checks && h.checks[selectedDayKey]).length;
+      const activeForSelectedDay = activeHabits.filter(h => !isTaskDayNone(h, selectedDayKey));
+      const noneCountForSelectedDay = activeHabits.length - activeForSelectedDay.length;
+      const dayDoneCount = activeForSelectedDay.filter(h => h.checks && h.checks[selectedDayKey]).length;
       bannerEl.innerHTML = `
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <span class="px-2.5 py-1 rounded-xl bg-indigo-600 text-white text-xs font-extrabold">
             ${selectedDayObj.shortDate} (${selectedDayObj.fullLabel})
           </span>
           <span class="text-xs font-extrabold text-slate-700 dark:text-slate-200">
-            達成: ${dayDoneCount} / ${activeHabits.length} タスク
+            達成: ${dayDoneCount} / ${activeForSelectedDay.length} タスク
           </span>
+          ${noneCountForSelectedDay > 0 ? `
+            <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+              （予定なし: ${noneCountForSelectedDay}件）
+            </span>
+          ` : ''}
         </div>
-        <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-300">
-          🎲 タスクごとのランダムEXP ＆ ゴールド獲得
-        </span>
+        <label class="inline-flex items-center gap-1.5 text-xs font-extrabold text-indigo-700 dark:text-indigo-300 bg-white/80 dark:bg-slate-900/80 px-2.5 py-1 rounded-xl border border-indigo-200 dark:border-indigo-800 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            ${state.hideNoneToday ? 'checked' : ''}
+            onchange="toggleHideNoneFilter(this.checked)"
+            class="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+          />
+          <span>「なし」は非表示にする</span>
+        </label>
       `;
 
       const filtered = activeHabits.filter(h => {
         if (state.selectedCategory !== 'all' && h.category !== state.selectedCategory) return false;
+        if (state.hideNoneToday && isTaskDayNone(h, selectedDayKey)) return false;
         if (state.onlyUncompletedToday && h.checks[selectedDayKey]) return false;
         if (state.searchQuery.trim()) {
           const q = state.searchQuery.toLowerCase();
@@ -2893,8 +3596,17 @@
 
       if (filtered.length === 0) {
         listEl.innerHTML = `
-          <div class="col-span-full py-10 text-center text-slate-500 dark:text-slate-400">
+          <div class="col-span-full py-10 text-center text-slate-500 dark:text-slate-400 space-y-2">
             <p class="text-sm font-bold">表示するタスクがありません</p>
+            ${state.hideNoneToday && noneCountForSelectedDay > 0 ? `
+              <button
+                type="button"
+                onclick="toggleHideNoneFilter(false)"
+                class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+              >
+                「なし」に設定されたタスク（${noneCountForSelectedDay}件）を表示する
+              </button>
+            ` : ''}
           </div>
         `;
         return;
@@ -2902,7 +3614,8 @@
 
       listEl.innerHTML = filtered.map(habit => {
         const cat = CATEGORIES[habit.category] || CATEGORIES.work;
-        const checked = !!(habit.checks && habit.checks[selectedDayKey]);
+        const isNone = isTaskDayNone(habit, selectedDayKey);
+        const checked = !isNone && !!(habit.checks && habit.checks[selectedDayKey]);
         const gainedExpVal = habit.expGains && habit.expGains[selectedDayKey] ? habit.expGains[selectedDayKey] : null;
         const dailyGoalText = (habit.dailyGoals && habit.dailyGoals[selectedDayKey]) ? habit.dailyGoals[selectedDayKey] : '';
         const completedDays = DAYS_OF_WEEK.filter(d => habit.checks && habit.checks[d.key]).length;
@@ -2910,7 +3623,11 @@
 
         return `
           <div class="rounded-2xl p-4 border transition-all flex flex-col justify-between gap-3 ${
-            checked ? cat.cellDoneBg : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xs'
+            isNone
+              ? 'bg-slate-100/80 dark:bg-slate-900/50 border-dashed border-slate-300 dark:border-slate-800 opacity-75'
+              : checked
+              ? cat.cellDoneBg
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xs'
           }">
             <div class="flex items-start justify-between gap-2">
               <div class="space-y-1 min-w-0">
@@ -2952,52 +3669,94 @@
 
             <div class="space-y-2 pt-1">
               <div>
-                <label class="block text-[11px] font-extrabold text-slate-600 dark:text-slate-300 mb-1">
-                  📌 ${selectedDayObj.shortDate}(${selectedDayObj.label}) の達成目標:
-                </label>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-[11px] font-extrabold text-slate-600 dark:text-slate-300">
+                    📌 ${selectedDayObj.shortDate}(${selectedDayObj.label}) の達成目標:
+                  </label>
+                  <label class="inline-flex items-center gap-1.5 text-xs font-extrabold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer select-none hover:border-indigo-400">
+                    <input
+                      type="checkbox"
+                      ${isNone ? 'checked' : ''}
+                      onchange="toggleDailyNone('${habit.id}', '${selectedDayKey}', this.checked)"
+                      class="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                    />
+                    <span>なし（予定なし）</span>
+                  </label>
+                </div>
                 <textarea
                   rows="2"
                   onchange="updateDailyGoal('${habit.id}', '${selectedDayKey}', this.value)"
                   placeholder="${selectedDayObj.shortDate}(${selectedDayObj.label})の目標を入力..."
-                  class="daily-goal-input w-full text-xs font-bold leading-snug p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 ${cat.focusRing} focus:outline-none text-slate-800 dark:text-slate-100"
+                  ${isNone ? 'disabled' : ''}
+                  class="daily-goal-input w-full text-xs font-bold leading-snug p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 ${cat.focusRing} focus:outline-none text-slate-800 dark:text-slate-100 ${isNone ? 'line-through text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60' : ''}"
                 >${escapeHtml(dailyGoalText)}</textarea>
               </div>
 
-              <button
-                type="button"
-                onclick="toggleCheck('${habit.id}', '${selectedDayKey}', event)"
-                class="w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 ${
-                  checked
-                    ? `${cat.checkActive} check-pop shadow-sm`
-                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
-                }"
-              >
-                <i data-lucide="${checked ? 'check-circle-2' : 'circle'}" class="w-4 h-4"></i>
-                <span>${checked ? `達成済み！ (+${gainedExpVal || habit.expMin} EXP 獲得済)` : `この日の目標を「達成」にする (🎲 ${habit.expMin}〜${habit.expMax} EXP)`}</span>
-              </button>
+              ${isNone ? `
+                <div class="w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                  <span>💤 この日は予定「なし」に設定されています</span>
+                </div>
+              ` : `
+                <button
+                  type="button"
+                  onclick="toggleCheck('${habit.id}', '${selectedDayKey}', event)"
+                  class="w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 ${
+                    checked
+                      ? `${cat.checkActive} check-pop shadow-sm`
+                      : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
+                  }"
+                >
+                  <i data-lucide="${checked ? 'check-circle-2' : 'circle'}" class="w-4 h-4"></i>
+                  <span>${checked ? `達成済み！ (+${gainedExpVal || habit.expMin} EXP 獲得済)` : `この日の目標を「達成」にする (🎲 ${habit.expMin}〜${habit.expMax} EXP)`}</span>
+                </button>
+              `}
             </div>
           </div>
         `;
       }).join('');
     }
 
-    function renderModalDailyInputs(dailyGoalsObj = {}) {
+    window.toggleHideNoneFilter = function(checked) {
+      state.hideNoneToday = !!checked;
+      const topCheckbox = document.getElementById('filter-hide-none-today');
+      if (topCheckbox) topCheckbox.checked = state.hideNoneToday;
+      renderAll();
+    };
+
+    function renderModalDailyInputs(dailyGoalsObj = {}, dailyNoneObj = {}) {
       const weekDates = getActiveWeekDates();
       const container = document.getElementById('modal-daily-goals-inputs');
-      container.innerHTML = weekDates.map(d => `
-        <div class="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-          <label class="block text-[11px] font-extrabold text-slate-600 dark:text-slate-300 mb-1">
-            ${d.label}曜日 (${d.shortDate}) の目標
-          </label>
-          <input
-            type="text"
-            id="modal-daily-${d.key}"
-            value="${escapeHtml(dailyGoalsObj[d.key] || '')}"
-            placeholder="例: 30分演習 / 掃除..."
-            class="w-full px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:outline-none text-slate-900 dark:text-white"
-          />
-        </div>
-      `).join('');
+      container.innerHTML = weekDates.map(d => {
+        const val = dailyGoalsObj[d.key] || '';
+        const isNone = !!(dailyNoneObj && dailyNoneObj[d.key]) || val.trim() === 'なし';
+        return `
+          <div class="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-[11px] font-extrabold text-slate-600 dark:text-slate-300">
+                ${d.label}曜日 (${d.shortDate}) の目標
+              </label>
+              <label class="inline-flex items-center gap-1 text-[11px] font-extrabold text-slate-500 dark:text-slate-400 cursor-pointer select-none hover:text-indigo-600">
+                <input
+                  type="checkbox"
+                  id="modal-daily-none-${d.key}"
+                  ${isNone ? 'checked' : ''}
+                  onchange="toggleModalDailyNone('${d.key}', this.checked)"
+                  class="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                />
+                <span>なし</span>
+              </label>
+            </div>
+            <input
+              type="text"
+              id="modal-daily-${d.key}"
+              value="${escapeHtml(isNone ? 'なし' : val)}"
+              oninput="onModalDailyTextInput('${d.key}', this.value)"
+              placeholder="例: 30分演習 / 掃除..."
+              class="w-full px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:outline-none text-slate-900 dark:text-white ${isNone ? 'opacity-50 bg-slate-200 dark:bg-slate-900' : ''}"
+            />
+          </div>
+        `;
+      }).join('');
     }
 
     window.setModalCategory = function(catId) {
@@ -3020,7 +3779,7 @@
       document.getElementById('form-exp-max').value = '30';
       document.getElementById('quick-fill-text').value = '';
       renderModalCategorySelector();
-      renderModalDailyInputs({});
+      renderModalDailyInputs({}, {});
 
       const modal = document.getElementById('habit-modal');
       modal.classList.remove('hidden');
@@ -3042,7 +3801,7 @@
       document.getElementById('quick-fill-text').value = '';
       state.modalSelectedCategory = habit.category;
       renderModalCategorySelector();
-      renderModalDailyInputs(habit.dailyGoals || {});
+      renderModalDailyInputs(habit.dailyGoals || {}, habit.dailyNone || {});
 
       const modal = document.getElementById('habit-modal');
       modal.classList.remove('hidden');
@@ -3113,7 +3872,8 @@
     window.copySyncCodeToClipboard = function() {
       const payload = JSON.stringify({
         tasks: state.tasks,
-        weeklyRecords: state.weeklyRecords
+        weeklyRecords: state.weeklyRecords,
+        rpgShop: state.rpgShop
       });
       const encoded = btoa(unescape(encodeURIComponent(payload)));
       const tempInput = document.createElement('textarea');
@@ -3137,6 +3897,8 @@
         if (parsed && Array.isArray(parsed.tasks) && parsed.tasks.length > 0) {
           state.tasks = parsed.tasks;
           state.weeklyRecords = parsed.weeklyRecords || {};
+          if (parsed.rpgShop) state.rpgShop = parsed.rpgShop;
+          ensureRpgShopDefaults();
           saveState();
           renderAll();
           input.value = '';
@@ -3153,7 +3915,8 @@
     window.exportJsonBackup = function() {
       const dataStr = JSON.stringify({
         tasks: state.tasks,
-        weeklyRecords: state.weeklyRecords
+        weeklyRecords: state.weeklyRecords,
+        rpgShop: state.rpgShop
       }, null, 2);
       const blob = new Blob([dataStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -3175,6 +3938,8 @@
           if (parsed && Array.isArray(parsed.tasks)) {
             state.tasks = parsed.tasks;
             state.weeklyRecords = parsed.weeklyRecords || {};
+            if (parsed.rpgShop) state.rpgShop = parsed.rpgShop;
+            ensureRpgShopDefaults();
             saveState();
             renderAll();
             closeSyncModal();
@@ -3251,26 +4016,36 @@
         const weekData = state.weeklyRecords[weekKey];
         state.tasks.forEach(t => {
           if (weekData[t.id]) {
-            weekData[t.id].checks[state.selectedTodayKey] = true;
+            const isNone = (weekData[t.id].dailyNone && weekData[t.id].dailyNone[state.selectedTodayKey]) ||
+                           ((weekData[t.id].dailyGoals && weekData[t.id].dailyGoals[state.selectedTodayKey]) || '').trim() === 'なし';
+            if (!isNone) {
+              weekData[t.id].checks[state.selectedTodayKey] = true;
+            }
           }
         });
         saveState();
         renderAll();
         const weekDates = getActiveWeekDates();
         const dayObj = weekDates.find(d => d.key === state.selectedTodayKey);
-        showToast(`🔥 ${dayObj.shortDate}(${dayObj.label})のすべての目標を達成済みにしました！`);
+        showToast(`🔥 ${dayObj.shortDate}(${dayObj.label})の予定タスクをすべて達成済みにしました！`);
       });
 
       document.getElementById('filter-uncompleted-today').addEventListener('change', (e) => {
         state.onlyUncompletedToday = e.target.checked;
-        renderStep2MatrixTable();
-        lucide.createIcons();
+        renderAll();
       });
+
+      const hideNoneCheckbox = document.getElementById('filter-hide-none-today');
+      if (hideNoneCheckbox) {
+        hideNoneCheckbox.addEventListener('change', (e) => {
+          state.hideNoneToday = e.target.checked;
+          renderAll();
+        });
+      }
 
       document.getElementById('search-input').addEventListener('input', (e) => {
         state.searchQuery = e.target.value;
-        renderStep2MatrixTable();
-        lucide.createIcons();
+        renderAll();
       });
 
       document.getElementById('btn-fill-weekdays').addEventListener('click', () => {
@@ -3279,6 +4054,7 @@
         ['mon', 'tue', 'wed', 'thu', 'fri'].forEach(k => {
           const el = document.getElementById(`modal-daily-${k}`);
           if (el) el.value = text;
+          window.onModalDailyTextInput(k, text);
         });
       });
 
@@ -3288,6 +4064,7 @@
         DAYS_OF_WEEK.forEach(d => {
           const el = document.getElementById(`modal-daily-${d.key}`);
           if (el) el.value = text;
+          window.onModalDailyTextInput(d.key, text);
         });
       });
 
@@ -3295,6 +4072,7 @@
         DAYS_OF_WEEK.forEach(d => {
           const el = document.getElementById(`modal-daily-${d.key}`);
           if (el) el.value = '';
+          window.onModalDailyTextInput(d.key, '');
         });
         document.getElementById('quick-fill-text').value = '';
         showToast('🧹 モーダル内の各日（月〜日）の目標欄をクリアしました');
@@ -3321,9 +4099,14 @@
         if (!name || !weeklyGoal) return;
 
         const dailyGoals = {};
+        const dailyNone = {};
         DAYS_OF_WEEK.forEach(d => {
           const el = document.getElementById(`modal-daily-${d.key}`);
-          dailyGoals[d.key] = el && el.value.trim() ? el.value.trim() : '';
+          const noneCb = document.getElementById(`modal-daily-none-${d.key}`);
+          const val = el && el.value.trim() ? el.value.trim() : '';
+          const isNone = (noneCb && noneCb.checked) || val === 'なし';
+          dailyNone[d.key] = isNone;
+          dailyGoals[d.key] = isNone ? 'なし' : val;
         });
 
         const weekKey = getActiveWeekKey();
@@ -3332,13 +4115,14 @@
         if (id) {
           state.tasks = state.tasks.map(t =>
             t.id === id
-              ? { ...t, name, category: state.modalSelectedCategory, targetDays, expMin, expMax, defaultWeeklyGoal: weeklyGoal, defaultDailyGoals: { ...dailyGoals } }
+              ? { ...t, name, category: state.modalSelectedCategory, targetDays, expMin, expMax, defaultWeeklyGoal: weeklyGoal, defaultDailyGoals: { ...dailyGoals }, defaultDailyNone: { ...dailyNone } }
               : t
           );
           state.weeklyRecords[weekKey][id] = {
             ...state.weeklyRecords[weekKey][id],
             weeklyGoal,
-            dailyGoals: { ...dailyGoals }
+            dailyGoals: { ...dailyGoals },
+            dailyNone: { ...dailyNone }
           };
           showToast(`「${name}」の目標とEXP幅（${expMin}〜${expMax} EXP）を更新しました`);
         } else {
@@ -3351,11 +4135,13 @@
             expMin,
             expMax,
             defaultWeeklyGoal: weeklyGoal,
-            defaultDailyGoals: { ...dailyGoals }
+            defaultDailyGoals: { ...dailyGoals },
+            defaultDailyNone: { ...dailyNone }
           });
           state.weeklyRecords[weekKey][newId] = {
             weeklyGoal,
             dailyGoals: { ...dailyGoals },
+            dailyNone: { ...dailyNone },
             checks: { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false },
             expGains: {}
           };
@@ -3422,9 +4208,12 @@
                   isApplyingRemote = true;
                   state.tasks = parsed.tasks;
                   state.weeklyRecords = parsed.weeklyRecords || {};
+                  if (parsed.rpgShop) state.rpgShop = parsed.rpgShop;
+                  ensureRpgShopDefaults();
                   localStorage.setItem('habitflow_v4_multiweek_data', JSON.stringify({
                     tasks: state.tasks,
-                    weeklyRecords: state.weeklyRecords
+                    weeklyRecords: state.weeklyRecords,
+                    rpgShop: state.rpgShop
                   }));
                   renderAll();
                   isApplyingRemote = false;
@@ -3452,7 +4241,8 @@
         const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'habitBoards', roomKey);
         const payloadJson = JSON.stringify({
           tasks: state.tasks,
-          weeklyRecords: state.weeklyRecords
+          weeklyRecords: state.weeklyRecords,
+          rpgShop: state.rpgShop
         });
         await setDoc(docRef, {
           payloadJson,
